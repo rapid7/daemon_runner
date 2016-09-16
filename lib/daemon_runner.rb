@@ -1,5 +1,2 @@
-require "daemon_runner/version"
-
-module DaemonRunner
-  # Your code goes here...
-end
+require_relative 'daemon_runner/version'
+require_relative 'daemon_runner/client'
