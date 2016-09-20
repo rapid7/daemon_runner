@@ -1,8 +1,8 @@
 # DaemonRunner
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/daemon_runner`. To experiment with that code, run `bin/console` for an interactive prompt.
+This is a library that will assist you in writing long running services that are composed of discrete tasks.  For example you may want to check that a service is running, or run some command and send it's output somewhere.
 
-TODO: Delete this and the text above, and describe your gem
+The basic design consists of a list of tasks that loop forever.  The user is responsible to defining what those tasks are and what they do in a subclass.
 
 ## Installation
 
@@ -22,7 +22,77 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+In order to use this gem you must subclass `DaemonRunner::Client` and add a few methods:
+
+* `tasks` - This is an array of tasks to run (**required**)
+
+`[[_class_instance1_, _method_], [_class_instance2_, _method_]]`
+
+* `wait` - Setup hook to run before starting tasks (**optional**)
+
+* `options` - Options hash to pass to `initialize` (**required**)
+    * :loop_sleep_time - Number of seconds to sleep before starting tasks again (**optional**, _default_: `5-10` seconds)
+    * :error_sleep_time - Number of seconds to sleep before retying a failed task (**optional**, _default_: 5 seconds)
+
+### Example
+
+```ruby
+#!/usr/bin/env ruby
+
+require_relative '../lib/daemon_runner'
+
+class MyService
+  class Tasks
+    class Foo
+      def run!
+        puts 'foo'
+        'foo'
+      end
+    end
+  end
+end
+
+class MyService
+  class Tasks
+    class Bar
+      def run!(name)
+        puts name
+        name
+      end
+    end
+  end
+end
+
+class MyService
+  class Tasks
+    class Baz
+      class << self
+        def run!(name)
+          puts name
+          name
+        end
+      end
+    end
+  end
+end
+
+class MyService
+  class Client < DaemonRunner::Client
+    def tasks
+      [
+        [::MyService::Tasks::Foo.new, 'run!'],
+        [::MyService::Tasks::Bar.new, 'run!', 'bar'],
+        [::MyService::Tasks::Baz, 'run!', 'baz']
+      ]
+    end
+  end
+end
+
+options = {}
+service = MyService::Client.new(options)
+service.start!
+```
+
 
 ## Development
 
@@ -32,10 +102,9 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/daemon_runner. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+Bug reports and pull requests are welcome on GitHub at https://github.com/rapid7/daemon_runner. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
