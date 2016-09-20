@@ -18,7 +18,7 @@ module DaemonRunner
       'Must implement this in a subclass'
     end
 
-    def tasks 
+    def tasks
       raise NotImplementedError, 'Must implement this in a subclass.  \
       This must be an array of method for the runner to call'
     end
@@ -46,11 +46,15 @@ module DaemonRunner
 
       loop do # Loop on tasks
         logger.warn 'Tasks list is empty' if tasks.empty?
-        tasks.each do |instance, method, args|
-          logger.debug "Running #{instance.class}.#{method}(#{args})"
-          if args.nil?
+        tasks.each do |task|
+          instance = task[0]
+          method = task[1]
+          args = task[2..-1].flatten
+          if args.empty?
+            logger.debug "Running #{instance.class}.#{method}"
             out = instance.send(method.to_sym)
           else
+            logger.debug "Running #{instance.class}.#{method}(#{args})"
             out = instance.send(method.to_sym, args)
           end
           logger.debug "Got: #{out}"

@@ -26,7 +26,12 @@ In order to use this gem you must subclass `DaemonRunner::Client` and add a few 
 
 * `tasks` - This is an array of tasks to run (**required**)
 
-`[[_class_instance1_, _method_], [_class_instance2_, _method_]]`
+```ruby
+[
+  [ClassName1, method_name, args],
+  [ClassName2, method_name, args]
+]
+  ```
 
 * `wait` - Setup hook to run before starting tasks (**optional**)
 
@@ -67,8 +72,11 @@ class MyService
   class Tasks
     class Baz
       class << self
-        def run!(name)
+        def run!(args)
+          name = args[0]
+          reason = args[1]
           puts name
+          puts reason
           name
         end
       end
@@ -82,7 +90,7 @@ class MyService
       [
         [::MyService::Tasks::Foo.new, 'run!'],
         [::MyService::Tasks::Bar.new, 'run!', 'bar'],
-        [::MyService::Tasks::Baz, 'run!', 'baz']
+        [::MyService::Tasks::Baz, 'run!', 'baz', 'because']
       ]
     end
   end

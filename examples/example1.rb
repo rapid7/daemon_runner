@@ -28,8 +28,11 @@ class MyService
   class Tasks
     class Baz
       class << self
-        def run!(name)
+        def run!(args)
+          name = args[0]
+          reason = args[1]
           puts name
+          puts reason
           name
         end
       end
@@ -43,7 +46,7 @@ class MyService
       [
         [::MyService::Tasks::Foo.new, 'run!'],
         [::MyService::Tasks::Bar.new, 'run!', 'bar'],
-        [::MyService::Tasks::Baz, 'run!', 'baz']
+        [::MyService::Tasks::Baz, 'run!', 'baz', 'because']
       ]
     end
   end
