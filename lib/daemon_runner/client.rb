@@ -46,9 +46,13 @@ module DaemonRunner
 
       loop do # Loop on tasks
         logger.warn 'Tasks list is empty' if tasks.empty?
-        tasks.each do |instance, method|
-          logger.debug "Running #{instance.class}.#{method}"
-          out = instance.send(method.to_sym)
+        tasks.each do |instance, method, args|
+          logger.debug "Running #{instance.class}.#{method}(#{args})"
+          if args.nil?
+            out = instance.send(method.to_sym)
+          else
+            out = instance.send(method.to_sym, args)
+          end
           logger.debug "Got: #{out}"
           sleep 1
         end
