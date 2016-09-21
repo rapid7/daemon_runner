@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["Andrew_Thompson@rapid7.com"]
 
   spec.summary       = %q{Small library to make writing long running services easy}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.homepage      = "https://github.com/rapid7/daemon_runner/"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
