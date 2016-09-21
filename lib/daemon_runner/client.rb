@@ -61,7 +61,7 @@ module DaemonRunner
     # Start the service
     # @return [nil]
     def start!
-      wait if respond_to?(:wait)
+      wait
 
       loop do # Loop on tasks
         logger.warn 'Tasks list is empty' if tasks.empty?
