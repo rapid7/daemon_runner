@@ -41,21 +41,13 @@ module DaemonRunner
     # @return [Fixnum] Number of seconds to sleep between loop interations.
     def loop_sleep_time
       return @loop_sleep_time unless @loop_sleep_time.nil?
-      if options[:loop_sleep_time].nil?
-        @loop_sleep_time = rand(5..10)
-      else
-        @loop_sleep_time = options[:loop_sleep_time]
-      end
+      @loop_sleep_time = options[:loop_sleep_time] || rand(5..10)
     end
 
     # @return [Fixnum] Number of seconds to sleep before retrying an error
     def error_sleep_time
       return @error_sleep_time unless @error_sleep_time.nil?
-      if options[:error_sleep_time].nil?
-        @error_sleep_time = 5
-      else
-        @error_sleep_time = options[:error_sleep_time]
-      end
+      @error_sleep_time = options[:error_sleep_time] ||= 5
     end
 
     # Start the service
