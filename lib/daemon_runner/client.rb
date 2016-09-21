@@ -35,7 +35,7 @@ module DaemonRunner
     #    end
     def tasks
       raise NotImplementedError, 'Must implement this in a subclass.  \
-      This must be an array of method for the runner to call'
+      This must be an array of methods for the runner to call'
     end
 
     # @return [Fixnum] Number of seconds to sleep between loop interations.
