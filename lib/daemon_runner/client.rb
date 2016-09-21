@@ -2,27 +2,43 @@ require 'logging'
 
 module DaemonRunner
   class Client
-    @@logger = Logging.logger(STDOUT)
 
-    attr_reader :options
+    # @attribute [r]
+    # Options hash
+    attr_reader :options, :logger
 
-    def initialize(options)
+    # @attribute [r]
+    # Logger instance
+    attr_reader :logger
+
+    def initialize(options, logger = STDOUT)
       @options = options
+      @logger = Logging.logger(logger)
     end
 
-    def logger
-      @@logger
-    end
-
+    # Hook to allow initial setup tasks before running tasks.
+    # @abstract Override {#wait} to pause before starting.
+    # @return [void]
     def wait
-      'Must implement this in a subclass'
     end
 
+    # List of tasks that get executed in {#start!}
+    # @abstract Override {#tasks} in a subclass.
+    # @return [Array<Array>]
+    # @example Example tasks method
+    #    def tasks
+    #      [
+    #        [::MyService::Tasks::Foo.new, 'run!'],
+    #        [::MyService::Tasks::Bar.new, 'run!', 'bar'],
+    #        [::MyService::Tasks::Baz, 'run!', 'baz', 'because']
+    #      ]
+    #    end
     def tasks
       raise NotImplementedError, 'Must implement this in a subclass.  \
       This must be an array of method for the runner to call'
     end
 
+    # @return [Fixnum] Number of seconds to sleep between loop interations.
     def loop_sleep_time
       return @loop_sleep_time unless @loop_sleep_time.nil?
       if options[:loop_sleep_time].nil?
@@ -32,6 +48,7 @@ module DaemonRunner
       end
     end
 
+    # @return [Fixnum] Number of seconds to sleep before retrying an error
     def error_sleep_time
       return @error_sleep_time unless @error_sleep_time.nil?
       if options[:error_sleep_time].nil?
@@ -41,6 +58,8 @@ module DaemonRunner
       end
     end
 
+    # Start the service
+    # @return [nil]
     def start!
       wait if respond_to?(:wait)
 
