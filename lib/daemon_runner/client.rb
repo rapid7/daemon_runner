@@ -50,6 +50,12 @@ module DaemonRunner
       @error_sleep_time = options[:error_sleep_time] ||= 5
     end
 
+    # @return [Fixnum] Number of seconds to sleep after each task
+    def post_task_sleep_time
+      return @post_task_sleep_time unless @post_task_sleep_time.nil?
+      @post_task_sleep_time = options[:post_task_sleep_time] ||= 1
+    end
+
     # Start the service
     # @return [nil]
     def start!
@@ -59,7 +65,7 @@ module DaemonRunner
         logger.warn 'Tasks list is empty' if tasks.empty?
         tasks.each do |task|
           run_task(task)
-          sleep 1
+          sleep post_task_sleep_time
         end
 
         sleep loop_sleep_time

@@ -38,6 +38,7 @@ In order to use this gem you must subclass `DaemonRunner::Client` and add a few 
 * `options` - Options hash to pass to `initialize` (**required**)
     * :loop_sleep_time - Number of seconds to sleep before starting tasks again (**optional**, _default_: `5-10` seconds)
     * :error_sleep_time - Number of seconds to sleep before retying a failed task (**optional**, _default_: 5 seconds)
+    * :post_task_sleep_time - Number of seconds to sleep after each task (**optional**, _default_: 1 seconds)
 
 ### Example
 
