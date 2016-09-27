@@ -50,4 +50,19 @@ class ShellOutTest < Minitest::Test
     @cmd.run!
     assert_equal 150, @cmd.timeout
   end
+
+  def test_can_run_new_nowait
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'ping -c 10 localhost',
+                                        cwd: '/tmp',
+                                        timeout: 250,
+                                        wait: false)
+    @cmd.run!
+    assert_equal false, @cmd.wait
+  end
+
+  def test_can_run_wait
+    @cmd = ::TestShellOut.new
+    @cmd.run!
+    assert_equal true, @cmd.wait
+  end
 end
