@@ -1,19 +1,14 @@
-require 'logging'
-
 module DaemonRunner
   class Client
+    include Logger
 
     # @attribute [r]
     # Options hash
-    attr_reader :options, :logger
+    attr_reader :options
 
-    # @attribute [r]
-    # Logger instance
-    attr_reader :logger
 
-    def initialize(options, logger = STDOUT)
+    def initialize(options)
       @options = options
-      @logger = Logging.logger(logger)
     end
 
     # Hook to allow initial setup tasks before running tasks.
