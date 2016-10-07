@@ -14,11 +14,6 @@ class ConsulIntegrationTest < Minitest::Test
   ::Dev::Consul.run
   ::Dev::Consul.wait
 
-  def setup
-    @session = ::DaemonRunner::Session.start(@service)
-    @prefix = "service/#{@service}/lock"
-  end
-
   ## Teardown
   def teardown
     @session = nil
