@@ -1,27 +1,7 @@
 require_relative '../test_helper'
 require 'dev/consul'
 
-class SessionTest < Minitest::Test
-
-  ## Setup
-  Dev::Consul.run
-  sleep 2
-  Dev::Consul.wait
-
-  def setup
-    @session = ::DaemonRunner::Session.start(@service)
-    @prefix = "service/#{@service}/lock"
-  end
-  ###
-
-  ## Teardown
-  def teardown
-    @session = nil
-    sleep 1
-  end
-  Minitest.after_run { Dev::Consul.stop }
-  ###
-
+class SessionTest < ConsulIntegrationTest
   def test_can_get_session
     @service = 'myservice1'
     refute_nil @session
