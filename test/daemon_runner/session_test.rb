@@ -25,5 +25,4 @@ class SessionTest < ConsulIntegrationTest
       DaemonRunner::Session.lock(@prefix)
     end
   end
-
 end
