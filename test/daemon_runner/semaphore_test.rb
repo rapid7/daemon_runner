@@ -1,10 +1,7 @@
 require 'test_helper'
 require_relative '../test_helper'
-#
-#curl -X PUT -d <body> http://localhost:8500/v1/kv/<prefix>/<session>?acquire=<session>
 
 class TestDaemonRunnerSemaphore < DaemonRunner::Semaphore
-
   def members
     ['foo', session.id]
   end
@@ -23,6 +20,13 @@ class TestDaemonRunnerSemaphore < DaemonRunner::Semaphore
     }
   end
 end
+
+class TestDaemonRunnerSemaphore2 < TestDaemonRunnerSemaphore
+  def active_members
+    ['foo', session.id]
+  end
+end
+
 
 class SemaphoreTest < ConsulIntegrationTest
 
@@ -80,5 +84,11 @@ class SemaphoreTest < ConsulIntegrationTest
     @sem = TestDaemonRunnerSemaphore.new('myservice7')
     assert_equal [@sem.session.id], @sem.active_members
     assert_respond_to @sem.active_members, :each
+  end
+
+  def test_can_get_holders
+    @sem = TestDaemonRunnerSemaphore2.new('myservice8')
+    holders = { @sem.session.id.to_s => true, 'foo' => true }
+    assert_equal holders, @sem.holders
   end
 end

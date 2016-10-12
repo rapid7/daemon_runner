@@ -71,5 +71,12 @@ module DaemonRunner
         holders & members
       end
     end
+
+    def holders
+      holders = {}
+      active_members.map { |m| holders[m] = true }
+      holders
+    end
+
   end
 end
