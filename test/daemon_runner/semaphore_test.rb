@@ -61,51 +61,25 @@ class SemaphoreTest < ConsulIntegrationTest
     assert_nil @sem.lock_content
   end
 
-  def test_can_get_empty_lock
-    @sem = DaemonRunner::Semaphore.new('myservice4')
-    @sem.semaphore_state
-    refute @sem.lock_exists?
-  end
-
-  def test_lock_exists_can_be_falsey
-    @sem = DaemonRunner::Semaphore.new('myservice5')
-    refute @sem.lock_exists?
-  end
-
-  def test_lock_exists_can_be_truthy
-    @sem = TestDaemonRunnerSemaphore.new('myservice6')
-    assert @sem.lock_exists?
-  end
-
-  def test_can_compare_lockfile_members_with_members
-    @sem = TestDaemonRunnerSemaphore.new('myservice7')
-    assert_equal [@sem.session.id], @sem.active_members
-    assert_respond_to @sem.active_members, :each
-  end
-
-  def test_can_get_holders
-    @sem = TestDaemonRunnerSemaphore2.new('myservice8')
-    holders = { @sem.session.id.to_s => true, 'foo' => true }
-    assert_equal holders, @sem.holders
-  end
-
-  def test_lockfile_format
-    @sem = TestDaemonRunnerSemaphore2.new('myservice9')
-    lockfile = {
-      'Limit' => 3,
-      'Holders' => {
-        @sem.session.id.to_s => true,
-        'foo' => true
-      }
-    }
-    assert_equal lockfile, @sem.lockfile_format
-  end
-
   def test_can_write_lockfile
-    @sem = DaemonRunner::Semaphore.new('myservice10')
+    @sem = DaemonRunner::Semaphore.new('myservice4')
     @sem.contender_key
     @sem.semaphore_state
     @sem.write_lock
+    lockfile = {
+      'Limit' => 3,
+      'Holders' => {
+        @sem.session.id.to_s => true
+      }
+    }
+
+    @sem.semaphore_state
+    assert_equal lockfile, @sem.lock_content
+  end
+
+  def test_can_get_semapore_lock
+    @sem = DaemonRunner::Semaphore.start('myservice5')
+    DaemonRunner::Semaphore.lock
     lockfile = {
       'Limit' => 3,
       'Holders' => {

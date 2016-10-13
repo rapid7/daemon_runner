@@ -57,6 +57,26 @@ module DaemonRunner
       state
     end
 
+    def write_lock
+      index = lock_exists? ? lock_modify_index : 0
+      value = JSON.generate(lockfile_format)
+      Diplomat::Kv.put(@lock, value, cas: index)
+    end
+
+    private
+
+    def decode_semaphore_state
+      lock_key = state.find { |k| k['Key'] == lock }
+      member_keys = state.delete_if { |k| k['Key'] == lock }
+      member_keys.map! { |k| k['Key'] }
+
+      unless lock_key.nil?
+        @lock_modify_index = lock_key['ModifyIndex']
+        @lock_content = JSON.parse(lock_key['Value'])
+      end
+      @members = member_keys.map { |k| k.split('/')[-1] }
+    end
+
     # Returns current state of lockfile
     def lock_exists?
       !lock_modify_index.nil? && !lock_content.nil?
@@ -70,12 +90,6 @@ module DaemonRunner
       else
         []
       end
-    end
-
-    def write_lock
-      index = lock_exists? ? lock_modify_index : 0
-      value = JSON.generate(lockfile_format)
-      Diplomat::Kv.put(@lock, value, cas: index)
     end
 
     def holders
@@ -93,18 +107,5 @@ module DaemonRunner
       }
     end
 
-    private
-
-    def decode_semaphore_state
-      lock_key = state.find { |k| k['Key'] == lock }
-      member_keys = state.delete_if { |k| k['Key'] == lock }
-      member_keys.map! { |k| k['Key'] }
-
-      unless lock_key.nil?
-        @lock_modify_index = lock_key['ModifyIndex']
-        @lock_content = JSON.parse(lock_key['Value'])
-      end
-      @members = member_keys.map { |k| k.split('/')[-1] }
-    end
   end
 end
