@@ -47,6 +47,7 @@ module DaemonRunner
     # Period, in seconds, that a session's locks will be
     attr_reader :delay
 
+    # Behavior when a session is invalidated, can be set to either release or delete
     attr_reader :behavior
 
     # @param name [String]  Session name
