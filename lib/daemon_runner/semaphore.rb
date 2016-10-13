@@ -26,11 +26,17 @@ module DaemonRunner
     # The Consul lock key
     attr_reader :lock
 
+    # The number of nodes that can obtain a semaphore lock
+    attr_reader :limit
+
     def initialize(name, prefix = nil, lock = nil)
       @session = Session.start(name)
       @prefix = prefix.nil? ? "service/#{name}/lock/" : prefix
       @prefix += '/' unless @prefix.end_with?('/')
-      @lock = lock.nil? ? "#{prefix}/.lock" : lock
+      @lock = lock.nil? ? "#{@prefix}.lock" : lock
+      @limit = 3
+      @lock_modify_index = nil
+      @lock_content = nil
     end
 
     # Create a contender key
@@ -47,16 +53,8 @@ module DaemonRunner
     def semaphore_state
       options = { decode_values: true, recurse: true }
       @state = Diplomat::Kv.get(prefix, options, :return)
-      unless @state.empty?
-        member_keys = @state.map { |k| k['Key'] }
-        if member_keys.include?(@lock)
-          lock_key = @state.delete_if { |k| k['Key'] == @lock }
-          @lock_modify_index = lock_key['ModifyIndex']
-          @lock_content = JSON.parse(Base64.decode64(lock_key['Value']))
-        end
-        @members = member_keys.map { |k| k.split('/')[-1] }
-      end
-      @state
+      decode_semaphore_state unless state.empty?
+      state
     end
 
     # Returns current state of lockfile
@@ -69,14 +67,44 @@ module DaemonRunner
         holders = lock_content['Holders']
         holders = holders.keys
         holders & members
+      else
+        []
       end
+    end
+
+    def write_lock
+      index = lock_exists? ? lock_modify_index : 0
+      value = JSON.generate(lockfile_format)
+      Diplomat::Kv.put(@lock, value, cas: index)
     end
 
     def holders
       holders = {}
-      active_members.map { |m| holders[m] = true }
+      members = active_members
+      members << session.id if members.length < limit
+      members.map { |m| holders[m] = true }
       holders
     end
 
+    def lockfile_format
+      {
+        'Limit' => limit,
+        'Holders' => holders
+      }
+    end
+
+    private
+
+    def decode_semaphore_state
+      lock_key = state.find { |k| k['Key'] == lock }
+      member_keys = state.delete_if { |k| k['Key'] == lock }
+      member_keys.map! { |k| k['Key'] }
+
+      unless lock_key.nil?
+        @lock_modify_index = lock_key['ModifyIndex']
+        @lock_content = JSON.parse(lock_key['Value'])
+      end
+      @members = member_keys.map { |k| k.split('/')[-1] }
+    end
   end
 end

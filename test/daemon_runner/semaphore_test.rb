@@ -1,4 +1,3 @@
-require 'test_helper'
 require_relative '../test_helper'
 
 class TestDaemonRunnerSemaphore < DaemonRunner::Semaphore
@@ -27,9 +26,7 @@ class TestDaemonRunnerSemaphore2 < TestDaemonRunnerSemaphore
   end
 end
 
-
 class SemaphoreTest < ConsulIntegrationTest
-
   def test_can_get_prefix
     @service = 'myservice1'
     @sem = DaemonRunner::Semaphore.new(@service)
@@ -90,5 +87,33 @@ class SemaphoreTest < ConsulIntegrationTest
     @sem = TestDaemonRunnerSemaphore2.new('myservice8')
     holders = { @sem.session.id.to_s => true, 'foo' => true }
     assert_equal holders, @sem.holders
+  end
+
+  def test_lockfile_format
+    @sem = TestDaemonRunnerSemaphore2.new('myservice9')
+    lockfile = {
+      'Limit' => 3,
+      'Holders' => {
+        @sem.session.id.to_s => true,
+        'foo' => true
+      }
+    }
+    assert_equal lockfile, @sem.lockfile_format
+  end
+
+  def test_can_write_lockfile
+    @sem = DaemonRunner::Semaphore.new('myservice10')
+    @sem.contender_key
+    @sem.semaphore_state
+    @sem.write_lock
+    lockfile = {
+      'Limit' => 3,
+      'Holders' => {
+        @sem.session.id.to_s => true
+      }
+    }
+
+    @sem.semaphore_state
+    assert_equal lockfile, @sem.lock_content
   end
 end
