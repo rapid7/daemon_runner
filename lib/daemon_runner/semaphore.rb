@@ -5,6 +5,27 @@ module DaemonRunner
   class Semaphore
     include Logger
 
+    class << self
+      attr_reader :lock
+
+      def start(name, **options)
+        @lock ||= Semaphore.new(name, options)
+      end
+
+      # Acquire a lock with the current session
+      #
+      # @param limit [Integer] The number of nodes that can request the lock
+      # @return [Boolean] `true` if the lock was acquired
+      #
+      def lock(limit = 3)
+        raise RuntimeError 'Must call start first' if lock.nil?
+        @lock.limit = limit
+        @lock.contender_key
+        @lock.semaphore_state
+        @lock.write_lock
+      end
+    end
+
     # The Consul session
     attr_reader :session
 
@@ -27,14 +48,13 @@ module DaemonRunner
     attr_reader :lock
 
     # The number of nodes that can obtain a semaphore lock
-    attr_reader :limit
+    attr_accessor :limit
 
     def initialize(name, prefix = nil, lock = nil)
       @session = Session.start(name)
       @prefix = prefix.nil? ? "service/#{name}/lock/" : prefix
       @prefix += '/' unless @prefix.end_with?('/')
       @lock = lock.nil? ? "#{@prefix}.lock" : lock
-      @limit = 3
       @lock_modify_index = nil
       @lock_content = nil
     end

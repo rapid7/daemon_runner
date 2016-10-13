@@ -63,6 +63,7 @@ class SemaphoreTest < ConsulIntegrationTest
 
   def test_can_write_lockfile
     @sem = DaemonRunner::Semaphore.new('myservice4')
+    @sem.limit = 3
     @sem.contender_key
     @sem.semaphore_state
     @sem.write_lock
