@@ -86,7 +86,8 @@ module DaemonRunner
 
     def write_lock
       index = lock_exists? ? lock_modify_index : 0
-      value = JSON.generate(lockfile_format)
+      value = generate_lockfile
+      return if value.nil?
       Diplomat::Kv.put(@lock, value, cas: index)
     end
 
@@ -127,12 +128,13 @@ module DaemonRunner
       holders
     end
 
-    def lockfile_format
-      {
+    def generate_lockfile
+      return if active_members.length >= limit
+      lockfile_format = {
         'Limit' => limit,
         'Holders' => holders
       }
+      JSON.generate(lockfile_format)
     end
-
   end
 end

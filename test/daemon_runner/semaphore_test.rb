@@ -105,4 +105,23 @@ class SemaphoreTest < ConsulIntegrationTest
     @sem.semaphore_state
     assert_equal lockfile, @sem.lock_content
   end
+
+  def test_can_get_semapore_lock_with_no_update
+    # Client 1
+    @sem1 = DaemonRunner::Semaphore.start('myservice7')
+    DaemonRunner::Semaphore.lock(1)
+    # Client 2
+    @sem2 = DaemonRunner::Semaphore.start('myservice7')
+    DaemonRunner::Semaphore.lock(1)
+
+    lockfile = {
+      'Limit' => 1,
+      'Holders' => {
+        @sem2.session.id.to_s => true
+      }
+    }
+
+    @sem2.semaphore_state
+    assert_equal lockfile, @sem2.lock_content
+  end
 end
