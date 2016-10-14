@@ -84,6 +84,8 @@ module DaemonRunner
       state
     end
 
+    # Write a new lock file if the number of contenders is less than `limit`
+    # @return [Boolean] `true` if the lock was written succesfully
     def write_lock
       index = lock_exists? ? lock_modify_index : 0
       value = generate_lockfile
@@ -93,6 +95,9 @@ module DaemonRunner
 
     private
 
+    # Decode raw response from Consul
+    # Set `@lock_modify_index`, `@lock_content`, and `@members`
+    # @returns [Array] List of members
     def decode_semaphore_state
       lock_key = state.find { |k| k['Key'] == lock }
       member_keys = state.delete_if { |k| k['Key'] == lock }
@@ -110,6 +115,10 @@ module DaemonRunner
       !lock_modify_index.nil? && !lock_content.nil?
     end
 
+    # Get the active members from the lock file, removing any _dead_ members
+    # This is accomplished by using the contenders keys(`@members`) to get the
+    # list of all alive members.  So we can easily remove any nodes that don't
+    # appear in that list.
     def active_members
       if lock_exists?
         holders = lock_content['Holders']
@@ -120,6 +129,7 @@ module DaemonRunner
       end
     end
 
+    # Format the list of holders for the lock file
     def holders
       holders = {}
       members = active_members
@@ -128,6 +138,8 @@ module DaemonRunner
       holders
     end
 
+    # Generate JSON formatted lockfile content, only if he number of contenders
+    # is less than `limit`
     def generate_lockfile
       return if active_members.length >= limit
       lockfile_format = {
