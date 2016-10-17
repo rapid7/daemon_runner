@@ -160,7 +160,7 @@ module DaemonRunner
       holders
     end
 
-    # Generate JSON formatted lockfile content, only if he number of contenders
+    # Generate JSON formatted lockfile content, only if the number of contenders
     # is less than `limit`
     def generate_lockfile
       return if active_members.length >= limit
