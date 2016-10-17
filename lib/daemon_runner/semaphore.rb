@@ -58,7 +58,7 @@ module DaemonRunner
     # @param prefix [String|NilClass] The Consul Kv prefix
     # @param lock [String|NilClass] The path to the lock file
     def initialize(name:, prefix: nil, lock: nil)
-      @session = Session.start(name)
+      @session = Session.start(name, behavior: 'delete')
       @prefix = prefix.nil? ? "service/#{name}/lock/" : prefix
       @prefix += '/' unless @prefix.end_with?('/')
       @lock = lock.nil? ? "#{@prefix}.lock" : lock
@@ -72,7 +72,7 @@ module DaemonRunner
         raise ArgumentError 'Value cannot be empty or nil'
       end
       key = "#{prefix}/#{session.id}"
-      Diplomat::Kv.put(key, value, acquire: session.id)
+      Diplomat::Lock.acquire(key, session.id, value)
     end
 
     # Get the current semaphore state by fetching all
