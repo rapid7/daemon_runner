@@ -58,13 +58,19 @@ module DaemonRunner
     # @param prefix [String|NilClass] The Consul Kv prefix
     # @param lock [String|NilClass] The path to the lock file
     def initialize(name:, prefix: nil, lock: nil)
-      @session = Session.start(name, behavior: 'delete')
+      create_session(name)
       @prefix = prefix.nil? ? "service/#{name}/lock/" : prefix
       @prefix += '/' unless @prefix.end_with?('/')
       @lock = lock.nil? ? "#{@prefix}.lock" : lock
       @lock_modify_index = nil
       @lock_content = nil
       @limit = nil
+    end
+
+    def create_session(name)
+      ::DaemonRunner::RetryErrors.retry(exceptions: [DaemonRunner::Session::CreateSessionError]) do
+        @session = Session.start(name, behavior: 'delete')
+      end
     end
 
     # FIXME: Cannot clear limit, when there have been 0 active locks
@@ -86,7 +92,9 @@ module DaemonRunner
         raise ArgumentError 'Value cannot be empty or nil'
       end
       key = "#{prefix}/#{session.id}"
-      Diplomat::Lock.acquire(key, session.id, value)
+      ::DaemonRunner::RetryErrors.retry do
+        @contender_key = Diplomat::Lock.acquire(key, session.id, value)
+      end
     end
 
     # Get the current semaphore state by fetching all
