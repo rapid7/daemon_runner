@@ -22,10 +22,10 @@ module DaemonRunner
       # @return [Boolean] `true` if the lock was acquired
       #
       def lock(limit = 3)
-        raise RuntimeError 'Must call start first' if @lock.nil?
-        @lock.limit = limit
+        raise RuntimeError, 'Must call start first' if @lock.nil?
         @lock.contender_key
         @lock.semaphore_state
+        @lock.set_limit(limit)
         @lock.write_lock
       end
     end
@@ -52,7 +52,7 @@ module DaemonRunner
     attr_reader :lock
 
     # The number of nodes that can obtain a semaphore lock
-    attr_accessor :limit
+    attr_reader :limit
 
     # @param name [String] The name of the session, it is also used in the `prefix`
     # @param prefix [String|NilClass] The Consul Kv prefix
@@ -64,6 +64,20 @@ module DaemonRunner
       @lock = lock.nil? ? "#{@prefix}.lock" : lock
       @lock_modify_index = nil
       @lock_content = nil
+      @limit = nil
+    end
+
+    # FIXME: Cannot clear limit, when there have been 0 active locks
+    # The number of nodes that can obtain a semaphore lock
+    def set_limit(new_limit)
+      if lock_exists?
+        if new_limit.to_i != @limit.to_i
+          logger.warn 'Limit in lockfile and @limit do not match using limit from lockfile'
+        end
+        @limit = lock_content['Limit']
+      else
+        @limit = new_limit
+      end
     end
 
     # Create a contender key
