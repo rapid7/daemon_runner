@@ -1,31 +1,5 @@
 require_relative '../test_helper'
 
-class TestDaemonRunnerSemaphore < DaemonRunner::Semaphore
-  def members
-    ['foo', session.id]
-  end
-
-  def lock_modify_index
-    21
-  end
-
-  def lock_content
-    {
-      'Limit' => 3,
-      'Holders' => {
-        '84263834-5f54-a595-2069-0ffb474e8d34' => true,
-        session.id.to_s => true
-      }
-    }
-  end
-end
-
-class TestDaemonRunnerSemaphore2 < TestDaemonRunnerSemaphore
-  def active_members
-    ['foo', session.id]
-  end
-end
-
 class SemaphoreTest < ConsulIntegrationTest
   def setup
     super
