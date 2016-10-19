@@ -26,7 +26,7 @@ module DaemonRunner
         @lock.contender_key
         @lock.semaphore_state
         @lock.set_limit(limit)
-        @lock.write_lock
+        @lock.try_lock
       end
     end
 
@@ -107,12 +107,21 @@ module DaemonRunner
       state
     end
 
+    def try_lock
+      prune_members
+      do_update = add_self_to_holders
+      if do_update
+        format_holders
+        write_lock
+      end
+    end
+
     # Write a new lock file if the number of contenders is less than `limit`
     # @return [Boolean] `true` if the lock was written succesfully
     def write_lock
       index = lock_exists? ? lock_modify_index : 0
       value = generate_lockfile
-      return if value.nil?
+      return true if value == true
       Diplomat::Kv.put(@lock, value, cas: index)
     end
 
@@ -138,12 +147,12 @@ module DaemonRunner
       !lock_modify_index.nil? && !lock_content.nil?
     end
 
-    # Get the active members from the lock file, removing any _dead_ members
+    # Get the active members from the lock file, removing any _dead_ members.
     # This is accomplished by using the contenders keys(`@members`) to get the
     # list of all alive members.  So we can easily remove any nodes that don't
     # appear in that list.
-    def active_members
-      if lock_exists?
+    def prune_members
+      @holders = if lock_exists?
         holders = lock_content['Holders']
         holders = holders.keys
         holders & members
@@ -152,22 +161,34 @@ module DaemonRunner
       end
     end
 
-    # Format the list of holders for the lock file
-    def holders
-      holders = {}
-      members = active_members
-      members << session.id if members.length < limit
-      members.map { |m| holders[m] = true }
-      holders
+    # Add our session.id to the holders list if holders is less than limit
+    def add_self_to_holders
+      @holders.uniq!
+      return true if @holders.include? session.id
+      if @holders.length < limit
+        @holders << session.id
+      end
     end
 
-    # Generate JSON formatted lockfile content, only if the number of contenders
-    # is less than `limit`
+    # Format the list of holders for the lock file
+    def format_holders
+      @holders.uniq!
+      @holders.sort!
+      holders = {}
+      logger.debug "Holders are: #{@holders.join(',')}"
+      @holders.map { |m| holders[m] = true }
+      @holders = holders
+    end
+
+    # Generate JSON formatted lockfile content, only if the content has changed
     def generate_lockfile
-      return if active_members.length >= limit
+      if lock_exists? && lock_content['Holders'] == @holders
+        logger.info 'Holders are unchanged, not updating'
+        return true
+      end
       lockfile_format = {
         'Limit' => limit,
-        'Holders' => holders
+        'Holders' => @holders
       }
       JSON.generate(lockfile_format)
     end
