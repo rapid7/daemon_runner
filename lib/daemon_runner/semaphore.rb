@@ -89,12 +89,13 @@ module DaemonRunner
     # Create a contender key
     def contender_key(value = 'none')
       if value.nil? || value.empty?
-        raise ArgumentError 'Value cannot be empty or nil'
+        raise ArgumentError, 'Value cannot be empty or nil'
       end
       key = "#{prefix}/#{session.id}"
       ::DaemonRunner::RetryErrors.retry do
         @contender_key = Diplomat::Lock.acquire(key, session.id, value)
       end
+      @contender_key
     end
 
     # Get the current semaphore state by fetching all

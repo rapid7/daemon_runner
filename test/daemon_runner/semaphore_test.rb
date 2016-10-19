@@ -27,30 +27,33 @@ class TestDaemonRunnerSemaphore2 < TestDaemonRunnerSemaphore
 end
 
 class SemaphoreTest < ConsulIntegrationTest
-  def test_can_get_prefix
-    @service = 'myservice1'
+  def setup
+    super
     @sem = DaemonRunner::Semaphore.new(name: @service)
+    @session = @sem.session
+  end
+
+  def test_can_get_prefix
     assert_equal 'service/myservice1/lock/', @sem.prefix
   end
 
-  def test_can_set_prefix
-    @service = 'myservice1'
+  def test_can_set_prefix_without_ending_slash
     assert_equal 'foo/', DaemonRunner::Semaphore.new(name: @service, prefix: 'foo').prefix
+  end
+
+  def test_can_set_prefix_with_ending_slash
     assert_equal 'bar/', DaemonRunner::Semaphore.new(name: @service, prefix: 'bar/').prefix
   end
 
   def test_can_write_contender_key
-    @sem = DaemonRunner::Semaphore.new(name: 'myservice1')
     assert @sem.contender_key
   end
 
   def test_can_get_empty_semapore_state
-    @sem = DaemonRunner::Semaphore.new(name: 'myservice2')
     assert_empty @sem.semaphore_state
   end
 
   def test_can_get_semapore_state
-    @sem = DaemonRunner::Semaphore.new(name: 'myservice3')
     @sem.contender_key
     refute_empty @sem.semaphore_state
     refute_nil @sem.state
@@ -62,7 +65,8 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_write_lockfile
-    @sem = DaemonRunner::Semaphore.new(name: 'myservice4')
+    @service = service_name
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     @sem.limit = 3
     @sem.contender_key
     @sem.semaphore_state
@@ -79,7 +83,6 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_semapore_lock
-    @sem = DaemonRunner::Semaphore.start('myservice5')
     DaemonRunner::Semaphore.lock
     lockfile = {
       'Limit' => 3,
@@ -93,7 +96,9 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_semapore_lock_with_options
-    @sem = DaemonRunner::Semaphore.start('myservice6', prefix: "service/myservice6/lock")
+    skip
+    @service = service_name
+    @sem = DaemonRunner::Semaphore.start(@service, prefix: "service/#{@service}/lock")
     DaemonRunner::Semaphore.lock
     lockfile = {
       'Limit' => 3,
@@ -108,18 +113,24 @@ class SemaphoreTest < ConsulIntegrationTest
 
   def test_can_get_semapore_lock_with_no_update
     # Client 1
-    @sem1 = DaemonRunner::Semaphore.start('myservice7')
+    @service1 = service_name
+    @sem1 = DaemonRunner::Semaphore.start(@service1)
     DaemonRunner::Semaphore.lock(1)
+
     # Client 2
-    @sem2 = DaemonRunner::Semaphore.start('myservice7')
+    @service2 = service_name
+    @sem2 = DaemonRunner::Semaphore.start(@service2)
     DaemonRunner::Semaphore.lock(1)
 
     lockfile = {
       'Limit' => 1,
       'Holders' => {
-        @sem2.session.id.to_s => true
+        @sem1.session.id.to_s => true
       }
     }
+
+    @sem1.semaphore_state
+    assert_equal lockfile, @sem1.lock_content
 
     @sem2.semaphore_state
     assert_equal lockfile, @sem2.lock_content
