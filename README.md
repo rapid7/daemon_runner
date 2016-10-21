@@ -148,6 +148,20 @@ def schedule
 end
 ```
 
+### Retries
+Simple interface to retry requests that are known to fails sometimes.  To add a retry wrap the code like this:
+
+```
+DaemonRunner::RetryErrors.retry do
+  my_not_so_good_network_service_that_fails_sometimes
+end
+```
+
+* `options` - Options hash to pass to `retry` (**optional**)
+    * :retries - Number of times to retry an exception (**optional**, _default_: 3)
+    * :exceptions - Array of exceptions to catch and retry (**optional**, _default_: `[Faraday::ClientError]`)
+
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
