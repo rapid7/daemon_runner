@@ -161,6 +161,15 @@ end
     * :retries - Number of times to retry an exception (**optional**, _default_: 3)
     * :exceptions - Array of exceptions to catch and retry (**optional**, _default_: `[Faraday::ClientError]`)
 
+### Locking
+Locking can be done either via an exclusive lock or a semaphore lock.  The major difference is that with a semaphore lock you can define how many nodes can obtain the lock.
+
+#### Exclusive Lock
+**TBD**
+
+#### Semaphore Lock
+For an example of how to implement semaphore locking take a look at the [example](/examples/example_semaphore.rb)
+
 
 ## Development
 
