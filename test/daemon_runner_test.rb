@@ -16,6 +16,18 @@ class MyService::Tasks::InvalidSched
   end
 end
 
+class MyService::Tasks::CustomTaskId
+  def task_id
+    'customtaskid'
+  end
+end
+
+class MyService::Tasks::InvalidTaskId
+  def task_id
+    nil
+  end
+end
+
 class TestDaemonRunner < ::DaemonRunner::Client
 end
 
@@ -84,5 +96,28 @@ class DaemonRunnerTest < Minitest::Test
       runner.send(:parse_schedule, parsed_task[:instance])
     end
     assert_match /Invalid schedule type/, err.message
+  end
+
+  def test_parsed_task_has_default_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::Foo, 'run!']
+    parsed_task = runner.send(:parse_task, task)
+    assert_equal 'MyService::Tasks::Foo.run!', parsed_task[:task_id]
+  end
+
+  def test_parsed_task_has_invalid_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::InvalidTaskId.new, 'run!']
+    err = assert_raises ArgumentError do
+      runner.send(:parse_task, task)
+    end
+    assert_match /Invalid task id/, err.message
+  end
+
+  def test_parsed_task_has_custom_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::CustomTaskId.new, 'run!']
+    parsed_task = runner.send(:parse_task, task)
+    assert_equal 'customtaskid', parsed_task[:task_id]
   end
 end

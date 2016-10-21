@@ -18,12 +18,13 @@ module DaemonRunner
       def scheduler.on_error(job, error)
         error_sleep_time = job[:error_sleep_time]
         logger = job[:logger]
+        task_id = job[:task_id]
 
-        logger.error(error)
-        logger.debug "Suspending #{job.id} for #{error_sleep_time} seconds"
+        logger.error "#{task_id}: #{error}"
+        logger.debug "#{task_id}: Suspending #{task_id} for #{error_sleep_time} seconds"
         job.pause
         sleep error_sleep_time
-        logger.debug "Resuming #{job.id}"
+        logger.debug "#{task_id}: Resuming #{task_id}"
         job.resume
       end
     end
@@ -121,6 +122,14 @@ module DaemonRunner
                          end
 
       out[:method] = task[1]
+
+      out[:task_id] = if out[:instance].respond_to?(:task_id)
+        out[:instance].send(:task_id).to_s
+      else
+        "#{out[:class_name]}.#{out[:method]}"
+      end
+      raise ArgumentError, 'Invalid task id' if out[:task_id].nil? || out[:task_id].empty?
+
       out[:args] = task[2..-1].flatten
       out
     end
@@ -155,26 +164,28 @@ module DaemonRunner
       class_name = parsed_task[:class_name]
       method = parsed_task[:method]
       args = parsed_task[:args]
+      task_id = parsed_task[:task_id]
 
       # Schedule the task
-      schedule_log_line = "Scheduling job #{class_name}.#{method} as `:#{schedule[:type]}` type"
+      schedule_log_line = "#{task_id}: Scheduling job #{class_name}.#{method} as `:#{schedule[:type]}` type"
       schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
       scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
-        log_line = "Running #{class_name}.#{method}"
+        log_line = "#{task_id}: Running #{class_name}.#{method}"
         log_line += "(#{args})" unless args.empty?
         logger.debug log_line
 
         job[:error_sleep_time] = error_sleep_time
         job[:logger] = logger
+        job[:task_id] = task_id
 
         out = if args.empty?
           instance.send(method.to_sym)
         else
           instance.send(method.to_sym, args)
         end
-        logger.debug "Got: #{out}"
+        logger.debug "#{task_id}: Got: #{out}"
       end
     end
 

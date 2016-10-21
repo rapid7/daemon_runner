@@ -19,6 +19,7 @@ class MyService
       def schedule
         [:cron, '*/1 * * * *']
       end
+
       def run!(name)
         puts name
         name
