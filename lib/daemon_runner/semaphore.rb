@@ -65,6 +65,7 @@ module DaemonRunner
       @lock_modify_index = nil
       @lock_content = nil
       @limit = nil
+      @reset = false
     end
 
     def create_session(name)
@@ -144,7 +145,7 @@ module DaemonRunner
 
     # Returns current state of lockfile
     def lock_exists?
-      !lock_modify_index.nil? && !lock_content.nil?
+      (!lock_modify_index.nil? && !lock_content.nil?) && !@reset
     end
 
     # Get the active members from the lock file, removing any _dead_ members.
@@ -164,6 +165,7 @@ module DaemonRunner
     # Add our session.id to the holders list if holders is less than limit
     def add_self_to_holders
       @holders.uniq!
+      @reset = true if @holders.length == 0
       return true if @holders.include? session.id
       if @holders.length < limit
         @holders << session.id
