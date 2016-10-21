@@ -137,7 +137,7 @@ module DaemonRunner
         schedule
       end
 
-      raise ArgumentError, 'Not enough element in the Array' if task_schedule.length < 2
+      raise ArgumentError, 'Malformed schedule definition, should be [TYPE, DURATION]' if task_schedule.length < 2
       raise ArgumentError, 'Invalid schedule type' unless valid_types.include?(task_schedule[0].to_sym)
 
       out[:type] = task_schedule[0].to_sym
