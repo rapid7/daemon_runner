@@ -65,4 +65,13 @@ class ShellOutTest < Minitest::Test
     @cmd.run!
     assert_equal true, @cmd.wait
   end
+
+  def test_returns_pid_for_nowait
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'ping -c 10 localhost',
+                                        cwd: '/tmp',
+                                        timeout: 250,
+                                        wait: false)
+    pid = @cmd.run!
+    assert_kind_of Fixnum, pid
+  end
 end
