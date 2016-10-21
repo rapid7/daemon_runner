@@ -1,3 +1,5 @@
+require 'rufus-scheduler'
+
 module DaemonRunner
   class Client
     include Logger
@@ -127,6 +129,12 @@ module DaemonRunner
             end
       logger.debug "Got: #{out}"
       out
+    end
+
+    # @return [Rufus::Scheduler] A scheduler instance
+    def scheduler
+      return @scheduler unless @scheduler.nil?
+      @scheduler = ::Rufus::Scheduler.new
     end
   end
 end
