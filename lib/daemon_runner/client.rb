@@ -178,8 +178,7 @@ module DaemonRunner
 
     # @return [Rufus::Scheduler] A scheduler instance
     def scheduler
-      return @scheduler unless @scheduler.nil?
-      @scheduler = ::Rufus::Scheduler.new
+      @scheduler ||= ::Rufus::Scheduler.new
     end
   end
 end
