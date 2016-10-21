@@ -11,6 +11,21 @@ module DaemonRunner
 
     def initialize(options)
       @options = options
+
+      # Set error handling
+      # @param [Rufus::Scheduler::Job] job job that raised the error
+      # @param [RuntimeError] error the body of the error
+      def scheduler.on_error(job, error)
+        error_sleep_time = job[:error_sleep_time]
+        logger = job[:logger]
+
+        logger.error(error)
+        logger.debug "Suspending #{job.id} for #{error_sleep_time} seconds"
+        job.pause
+        sleep error_sleep_time
+        logger.debug "Resuming #{job.id}"
+        job.resume
+      end
     end
 
     # Hook to allow initial setup tasks before running tasks.
@@ -35,7 +50,14 @@ module DaemonRunner
       This must be an array of methods for the runner to call'
     end
 
-    # @return [Fixnum] Number of seconds to sleep between loop interations.
+    # @return [Array<Symbol, String/Fixnum>] Schedule tuple-like with the type of schedule and its timing.
+    def schedule
+      # The default type is an `interval` which trigger, execute and then trigger again after
+      # the interval has elapsed.
+      [:interval, loop_sleep_time]
+    end
+
+    # @return [Fixnum] Number of seconds to sleep between loop interactions.
     def loop_sleep_time
       return @loop_sleep_time unless @loop_sleep_time.nil?
       @loop_sleep_time = if options[:loop_sleep_time].nil?
@@ -106,6 +128,26 @@ module DaemonRunner
 
       out[:method] = task[1]
       out[:args] = task[2..-1].flatten
+      out
+    end
+
+    # @private
+    # @param [Class] instance an instance of the task class
+    # @return [Hash<Symbol, String>] schedule parsed in parts: Schedule type and timing
+    def parse_schedule(instance)
+      valid_types = [:in, :at, :every, :interval, :cron]
+      out = {}
+      task_schedule = if instance.respond_to?(:schedule)
+        instance.send(:schedule)
+      else
+        schedule
+      end
+
+      raise ArgumentError, 'Not enough element in the Array' if task_schedule.length < 2
+      raise ArgumentError, 'Invalid schedule type' unless valid_types.include?(task_schedule[0].to_sym)
+
+      out[:type] = task_schedule[0].to_sym
+      out[:schedule] = task_schedule[1]
       out
     end
 
