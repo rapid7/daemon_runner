@@ -45,9 +45,10 @@ module DaemonRunner
     # @return [Fixnum] process id
     def run_and_detach
       log_r, log_w = IO.pipe
-      Process.spawn(command, pgroup: true, err: :out, out: log_w)
+      pid = Process.spawn(command, pgroup: true, err: :out, out: log_w)
       log_r.close
       log_w.close
+      pid
     end
 
     # Validate command is defined before trying to start the command
