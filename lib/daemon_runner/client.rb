@@ -155,15 +155,17 @@ module DaemonRunner
       class_name = parsed_task[:class_name]
       method = parsed_task[:method]
       args = parsed_task[:args]
-      log_line = "Running #{class_name}.#{method}"
-      log_line += "(#{args})" unless args.empty?
-      logger.debug log_line
 
       # Schedule the task
-      schedule_log_line = "Scheduling job type #{schedule[:type]}"
+      schedule_log_line = "Scheduling job #{class_name}.#{method} as #{schedule[:type]} type"
       schedule_log_line += " with interval #{schedule[:schedule]}"
       logger.debug schedule_log_line
+
       scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
+        log_line = "Running #{class_name}.#{method}"
+        log_line += "(#{args})" unless args.empty?
+        logger.debug log_line
+
         job[:error_sleep_time] = error_sleep_time
         job[:logger] = logger
 
