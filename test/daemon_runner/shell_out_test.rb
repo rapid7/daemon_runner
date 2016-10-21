@@ -74,4 +74,10 @@ class ShellOutTest < Minitest::Test
     pid = @cmd.run!
     assert_kind_of Fixnum, pid
   end
+
+  def test_returns_mixlib_shellout_for_wait
+    @cmd = ::TestShellOut.new
+    shellout = @cmd.run!
+    assert_kind_of Mixlib::ShellOut, shellout
+  end
 end
