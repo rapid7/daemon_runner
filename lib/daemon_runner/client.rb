@@ -157,8 +157,8 @@ module DaemonRunner
       args = parsed_task[:args]
 
       # Schedule the task
-      schedule_log_line = "Scheduling job #{class_name}.#{method} as #{schedule[:type]} type"
-      schedule_log_line += " with interval #{schedule[:schedule]}"
+      schedule_log_line = "Scheduling job #{class_name}.#{method} as `:#{schedule[:type]}` type"
+      schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
       scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
