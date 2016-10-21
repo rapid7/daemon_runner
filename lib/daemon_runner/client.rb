@@ -92,22 +92,16 @@ module DaemonRunner
     def start!
       wait
 
-      loop do # Loop on tasks
-        logger.warn 'Tasks list is empty' if tasks.empty?
-        tasks.each do |task|
-          run_task(task)
-          sleep post_task_sleep_time
-        end
-
-        sleep loop_sleep_time
+      logger.warn 'Tasks list is empty' if tasks.empty?
+      tasks.each do |task|
+        run_task(task)
+        sleep post_task_sleep_time
       end
 
-    rescue StandardError => e
-      # Don't exit the process if initialization fails.
-      logger.error(e)
-
-      sleep error_sleep_time
-      retry
+      scheduler.join
+    rescue SystemExit, Interrupt
+      logger.info 'Shutting down'
+      scheduler.shutdown
     end
 
     private
@@ -157,6 +151,7 @@ module DaemonRunner
     def run_task(task)
       parsed_task = parse_task(task)
       instance = parsed_task[:instance]
+      schedule = parse_schedule(instance)
       class_name = parsed_task[:class_name]
       method = parsed_task[:method]
       args = parsed_task[:args]
@@ -164,13 +159,21 @@ module DaemonRunner
       log_line += "(#{args})" unless args.empty?
       logger.debug log_line
 
-      out = if args.empty?
-              instance.send(method.to_sym)
-            else
-              instance.send(method.to_sym, args)
-            end
-      logger.debug "Got: #{out}"
-      out
+      # Schedule the task
+      schedule_log_line = "Scheduling job type #{schedule[:type]}"
+      schedule_log_line += " with interval #{schedule[:schedule]}"
+      logger.debug schedule_log_line
+      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
+        job[:error_sleep_time] = error_sleep_time
+        job[:logger] = logger
+
+        out = if args.empty?
+          instance.send(method.to_sym)
+        else
+          instance.send(method.to_sym, args)
+        end
+        logger.debug "Got: #{out}"
+      end
     end
 
     # @return [Rufus::Scheduler] A scheduler instance
