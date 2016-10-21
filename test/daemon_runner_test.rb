@@ -5,6 +5,28 @@ class MyService::Tasks; end
 class MyService::Tasks::Foo; end
 class MyService::Tasks::Bar; end
 class MyService::Tasks::Baz; end
+class MyService::Tasks::Quiz
+  def schedule
+    [:every, 10]
+  end
+end
+class MyService::Tasks::InvalidSched
+  def schedule
+    [:thiswontwork, 25]
+  end
+end
+
+class MyService::Tasks::CustomTaskId
+  def task_id
+    'customtaskid'
+  end
+end
+
+class MyService::Tasks::InvalidTaskId
+  def task_id
+    nil
+  end
+end
 
 class TestDaemonRunner < ::DaemonRunner::Client
 end
@@ -46,5 +68,56 @@ class DaemonRunnerTest < Minitest::Test
     task2 = [::MyService::Tasks::Foo, 'run!', 'foo', 'bar']
     parsed_task2 = runner.send(:parse_task, task2)
     assert_equal ['foo', 'bar'], parsed_task2[:args]
+  end
+
+  def test_parsed_task_has_default_schedule
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::Foo.new, 'run!', 'foo']
+    parsed_task = runner.send(:parse_task, task)
+    parsed_schedule = runner.send(:parse_schedule, parsed_task[:instance])
+    expected = {:type => :interval, :schedule => 5}
+    assert_equal expected, parsed_schedule
+  end
+
+  def test_parsed_task_can_provide_schedule
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::Quiz.new, 'run!', 'foo']
+    parsed_task = runner.send(:parse_task, task)
+    parsed_schedule = runner.send(:parse_schedule, parsed_task[:instance])
+    expected = {:type => :every, :schedule => 10}
+    assert_equal expected, parsed_schedule
+  end
+
+  def test_parsed_task_errors_if_invalid_schedule_type
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::InvalidSched.new, 'run!', 'foo']
+    parsed_task = runner.send(:parse_task, task)
+    err = assert_raises ArgumentError do
+      runner.send(:parse_schedule, parsed_task[:instance])
+    end
+    assert_match /Invalid schedule type/, err.message
+  end
+
+  def test_parsed_task_has_default_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::Foo, 'run!']
+    parsed_task = runner.send(:parse_task, task)
+    assert_equal 'MyService::Tasks::Foo.run!', parsed_task[:task_id]
+  end
+
+  def test_parsed_task_has_invalid_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::InvalidTaskId.new, 'run!']
+    err = assert_raises ArgumentError do
+      runner.send(:parse_task, task)
+    end
+    assert_match /Invalid task id/, err.message
+  end
+
+  def test_parsed_task_has_custom_task_id
+    runner = TestDaemonRunner.new({})
+    task = [::MyService::Tasks::CustomTaskId.new, 'run!']
+    parsed_task = runner.send(:parse_task, task)
+    assert_equal 'customtaskid', parsed_task[:task_id]
   end
 end

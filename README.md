@@ -40,6 +40,8 @@ In order to use this gem you must subclass `DaemonRunner::Client` and add a few 
     * :error_sleep_time - Number of seconds to sleep before retying a failed task (**optional**, _default_: 5 seconds)
     * :post_task_sleep_time - Number of seconds to sleep after each task (**optional**, _default_: 1 seconds)
 
+* `schedule` - How often the task should run. See [Scheduling](#scheduling) below. (**optional**)
+
 ### Example
 
 ```ruby
@@ -102,6 +104,49 @@ service = MyService::Client.new(options)
 service.start!
 ```
 
+### Scheduling
+Tasks can define the schedule that they run on and how their schedule is executed.
+To do this, define a method named `schedule` with an array formatted as:
+
+```ruby
+  [:schedule_type, duration]
+```
+
+For example, if you wanted your task to run every 5 minutes, you would do the
+following:
+
+```ruby
+#!/usr/bin/env ruby
+
+class MyService
+  class Tasks
+    class Quiz
+      def schedule
+        [:every, '5m']
+      end
+
+      def run!(args)
+        puts args
+        args
+      end
+    end
+  end
+end
+```
+
+This would execute the `run!` method every 5 minutes. Duration can be defined as a
+string in the `'<number>s/m/h/d/w'` format or as a number of seconds. Schedule types
+are `:in, :at, :every, :cron, :interval`. See rufus-scheduler's
+[README](https://github.com/jmettraux/rufus-scheduler#in-at-every-interval-cron)
+for more information.
+
+The default for tasks that don't explicitly define a schedule is
+
+```ruby
+def schedule
+  [:interval, options[:loop_sleep_time]]
+end
+```
 
 ## Development
 
