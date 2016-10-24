@@ -27,6 +27,13 @@ module DaemonRunner
         @lock.semaphore_state
         @lock.set_limit(limit)
         @lock.try_lock
+
+        loop do
+          if @lock.renew?
+            @lock.semaphore_state
+            @lock.try_lock
+          end
+        end
       end
     end
 
@@ -124,6 +131,21 @@ module DaemonRunner
       value = generate_lockfile
       return true if value == true
       Diplomat::Kv.put(@lock, value, cas: index)
+    end
+
+    # Start a blocking query on the prefix, if there are changes
+    # we need to try to obtain the lock again.
+    #
+    # @return [Boolean] `true` if there are changes,
+    #  `false` if the request has timed out
+    def renew?
+      logger.debug("Watching Consul #{prefix} for changes")
+      options = { recurse: true }
+      changes = Diplomat::Kv.get(prefix, options, :wait, :wait)
+      logger.info("Changes on #{prefix} detected") if changes
+      changes
+    rescue StandardError => e
+      logger.error(e)
     end
 
     private
