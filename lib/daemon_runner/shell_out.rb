@@ -3,17 +3,19 @@ require 'mixlib/shellout'
 module DaemonRunner
   class ShellOut
     attr_reader :runner, :stdout
-    attr_reader :command, :cwd, :timeout, :wait
+    attr_reader :command, :cwd, :timeout, :wait, :valid_exit_codes
 
     # @param command [String] the command to run
     # @param cwd [String] the working directory to run the command
     # @param timeout [Fixnum] the command timeout
     # @param wait [Boolean] wheather to wait for the command to finish
-    def initialize(command: nil, cwd: '/tmp', timeout: 15, wait: true)
+    # @param valid_exit_codes [Array<Fixnum>] exit codes that aren't flagged as failures
+    def initialize(command: nil, cwd: '/tmp', timeout: 15, wait: true, valid_exit_codes: [0])
       @command = command
       @cwd = cwd
       @timeout = timeout
       @wait = wait
+      @valid_exit_codes = valid_exit_codes
     end
 
     # Run command
@@ -75,6 +77,7 @@ module DaemonRunner
     # @return [Mixlib::ShellOut] client
     def runner
       @runner ||= Mixlib::ShellOut.new(command, :cwd => cwd, :timeout => timeout)
+      @runner.valid_exit_codes = valid_exit_codes
     end
   end
 end
