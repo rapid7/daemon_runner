@@ -122,6 +122,7 @@ module DaemonRunner
         format_holders
         write_lock
       end
+      locked?
     end
 
     # Write a new lock file if the number of contenders is less than `limit`
@@ -130,7 +131,7 @@ module DaemonRunner
       index = lock_modify_index.nil? ? 0 : lock_modify_index
       value = generate_lockfile
       return true if value == true
-      Diplomat::Kv.put(@lock, value, cas: index)
+      @locked = Diplomat::Kv.put(@lock, value, cas: index)
     end
 
     # Start a blocking query on the prefix, if there are changes
@@ -216,6 +217,13 @@ module DaemonRunner
         'Holders' => @holders
       }
       JSON.generate(lockfile_format)
+    end
+
+    def locked?
+      msg = 'Lock %{text} obtained'
+      text = @locked == true ? 'succesfully' : 'could not be'
+      msg = msg % { text: text }
+      logger.info msg
     end
   end
 end
