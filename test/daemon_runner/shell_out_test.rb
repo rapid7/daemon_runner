@@ -80,4 +80,17 @@ class ShellOutTest < Minitest::Test
     shellout = @cmd.run!
     assert_kind_of Mixlib::ShellOut, shellout
   end
+
+  def test_defaults_to_zero_for_valid_exit_codes
+    @cmd = ::TestShellOut.new
+    shellout = @cmd.run!
+    assert_equal [0], shellout.valid_exit_codes
+  end
+
+  def test_allows_custom_valid_exit_codes
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'exit 1',
+                                        valid_exit_codes: [1])
+    shellout = @cmd.run!
+    assert_equal [1], shellout.valid_exit_codes
+  end
 end
