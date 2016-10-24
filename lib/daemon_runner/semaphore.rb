@@ -120,7 +120,7 @@ module DaemonRunner
     # Write a new lock file if the number of contenders is less than `limit`
     # @return [Boolean] `true` if the lock was written succesfully
     def write_lock
-      index = lock_exists? ? lock_modify_index : 0
+      index = lock_modify_index.nil? ? 0 : lock_modify_index
       value = generate_lockfile
       return true if value == true
       Diplomat::Kv.put(@lock, value, cas: index)
@@ -155,6 +155,7 @@ module DaemonRunner
     def prune_members
       @holders = if lock_exists?
         holders = lock_content['Holders']
+        return @holders = [] if holders.nil?
         holders = holders.keys
         holders & members
       else
