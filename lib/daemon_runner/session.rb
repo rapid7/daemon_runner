@@ -16,7 +16,7 @@ module DaemonRunner
 
       def start(name, **options)
         @session ||= Session.new(name, options).renew!
-        raise CreateSessionError, 'Failed to create session' if @sesison == false
+        raise CreateSessionError, 'Failed to create session' if @session == false
         @session.verify_session
         @session
       end
