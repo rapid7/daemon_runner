@@ -1,5 +1,4 @@
 require 'diplomat'
-require 'timeout'
 
 module DaemonRunner
   #
@@ -115,11 +114,12 @@ module DaemonRunner
     end
 
     # Verify wheather the session exists after a period of time
-    def verify_session
+    def verify_session(wait_time = 2)
       logger.info(" - Wait until Consul session #{id} exists")
-      Timeout.timeout(2) do
-        sleep 1 if session_exist?
-        raise CreateSessionError, 'Error creating session'
+      wait_time.times do
+        exists = session_exist?
+        raise CreateSessionError, 'Error creating session' unless exists
+        sleep 1
       end
       logger.info(" - Found Consul session #{id}")
     rescue CreateSessionError
