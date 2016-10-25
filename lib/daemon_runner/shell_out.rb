@@ -40,6 +40,13 @@ module DaemonRunner
       end
     end
 
+    # Wait for the process to finish
+    # @param flags [Fixnum] flags to Process.wait2
+    # @return [Process::Status, nil] the process status or nil if no process was found
+    def wait2(flags = 0)
+      self.class.wait2(@pid, flags)
+    end
+
     private
 
     # Run a command and wait for it to finish
@@ -58,10 +65,10 @@ module DaemonRunner
     # @return [Fixnum] process id
     def run_and_detach
       log_r, log_w = IO.pipe
-      pid = Process.spawn(command, pgroup: true, err: :out, out: log_w)
+      @pid = Process.spawn(command, pgroup: true, err: :out, out: log_w)
       log_r.close
       log_w.close
-      pid
+      @pid
     end
 
     # Validate command is defined before trying to start the command

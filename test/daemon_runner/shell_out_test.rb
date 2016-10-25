@@ -107,4 +107,13 @@ class ShellOutTest < Minitest::Test
     result = ::DaemonRunner::ShellOut.wait2
     assert_equal nil, result
   end
+
+  def test_wait2_tracks_running_process
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'exit 255',
+                                        valid_exit_codes: [255],
+                                        wait: false)
+    @cmd.run!
+    result = @cmd.wait2
+    assert_equal 255, result.exitstatus
+  end
 end
