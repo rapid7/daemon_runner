@@ -5,6 +5,16 @@ module DaemonRunner
     attr_reader :runner, :stdout
     attr_reader :command, :cwd, :timeout, :wait, :valid_exit_codes
 
+    # Wait for the process with the given pid to finish
+    # @param pid [Fixnum] the pid to wait on
+    # @param flags [Fixnum] flags to Process.wait2
+    # @return [Process::Status, nil] the process status or nil if no process was found
+    def self.wait2(pid = nil, flags = 0)
+      Process.wait2(pid, flags)[1]
+    rescue Errno::ECHILD
+      nil
+    end
+
     # @param command [String] the command to run
     # @param cwd [String] the working directory to run the command
     # @param timeout [Fixnum] the command timeout

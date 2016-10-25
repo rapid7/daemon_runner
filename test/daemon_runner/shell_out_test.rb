@@ -93,4 +93,13 @@ class ShellOutTest < Minitest::Test
     shellout = @cmd.run!
     assert_equal [1], shellout.valid_exit_codes
   end
+
+  def test_returns_nil_if_waiting_without_child_process
+    wait2 = lambda { |pid, flags| raise Errno::ECHILD }
+
+    Process.stub :wait2, wait2 do
+      result = ::DaemonRunner::ShellOut.wait2(2600)
+      assert_equal nil, result
+    end
+  end
 end
