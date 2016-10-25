@@ -93,4 +93,36 @@ class ShellOutTest < Minitest::Test
     shellout = @cmd.run!
     assert_equal [1], shellout.valid_exit_codes
   end
+
+  def test_wait2_returns_nil_if_waiting_without_child_process
+    wait2 = lambda { |pid, flags| raise Errno::ECHILD }
+
+    Process.stub :wait2, wait2 do
+      result = ::DaemonRunner::ShellOut.wait2(2600)
+      assert_equal nil, result
+    end
+  end
+
+  def test_wait2_returns_nil_if_pid_is_not_provided
+    result = ::DaemonRunner::ShellOut.wait2
+    assert_equal nil, result
+  end
+
+  def test_wait2_tracks_running_process
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'exit 255',
+                                        valid_exit_codes: [255],
+                                        wait: false)
+    @cmd.run!
+    result = @cmd.wait2
+    assert_equal 255, result.exitstatus
+  end
+
+  def test_wait2_returns_nil_if_running_process_is_waiting
+    @cmd = ::DaemonRunner::ShellOut.new(command: 'exit 255',
+                                        valid_exit_codes: [255],
+                                        wait: true)
+    @cmd.run!
+    result = @cmd.wait2
+    assert_equal nil, result
+  end
 end
