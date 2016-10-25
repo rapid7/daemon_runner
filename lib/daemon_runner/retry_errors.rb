@@ -5,12 +5,15 @@ module DaemonRunner
     # Retry Errors
     #
     class RetryErrors
+      extend Logger
+
       class << self
         def retry(retries: 3, exceptions: [Faraday::ClientError], &block)
           Retryable.retryable({
             on: exceptions,
             sleep: lambda { |c| 2 ** c * 0.3 },
             tries: retries}) do |retries, exception|
+              logger.warn "try #{retries} failed with exception: #{exception}" if retries > 0
               block.call
           end
         end
