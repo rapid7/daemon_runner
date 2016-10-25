@@ -102,4 +102,9 @@ class ShellOutTest < Minitest::Test
       assert_equal nil, result
     end
   end
+
+  def test_returns_nil_if_pid_is_not_provided
+    result = ::DaemonRunner::ShellOut.wait2
+    assert_equal nil, result
+  end
 end

@@ -10,6 +10,7 @@ module DaemonRunner
     # @param flags [Fixnum] flags to Process.wait2
     # @return [Process::Status, nil] the process status or nil if no process was found
     def self.wait2(pid = nil, flags = 0)
+      return nil if pid.nil?
       Process.wait2(pid, flags)[1]
     rescue Errno::ECHILD
       nil
