@@ -8,7 +8,7 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_prefix
-    assert_equal 'service/myservice1/lock/', @sem.prefix
+    assert_equal "service/#{@service}/lock/", @sem.prefix
   end
 
   def test_can_set_prefix_without_ending_slash
@@ -57,7 +57,8 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_semapore_lock
-    DaemonRunner::Semaphore.lock
+    @sem = DaemonRunner::Semaphore.start(@service)
+    lock = DaemonRunner::Semaphore.lock
     lockfile = {
       'Limit' => 3,
       'Holders' => {
