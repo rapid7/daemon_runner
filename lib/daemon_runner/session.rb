@@ -5,6 +5,9 @@ module DaemonRunner
   # Manage distributed locks with Consul
   #
   class Session
+    class SessionError < RuntimeError; end
+    class CreateSessionError < SessionError; end
+
     include Logger
 
     class << self
@@ -12,6 +15,9 @@ module DaemonRunner
 
       def start(name, **options)
         @session ||= Session.new(name, options).renew!
+        raise CreateSessionError, 'Failed to create session' if @session == false
+        @session.verify_session
+        @session
       end
 
 
@@ -22,7 +28,7 @@ module DaemonRunner
       # @return [Boolean] `true` if the lock was acquired
       #
       def lock(path)
-        Diplomat::Lock.acquire(path, session.id)
+        Diplomat::Lock.wait_to_acquire(path, session.id)
       end
 
       # Release a lock held by the current session
@@ -107,6 +113,19 @@ module DaemonRunner
       Diplomat::Session.destroy(id)
     end
 
+    # Verify wheather the session exists after a period of time
+    def verify_session(wait_time = 2)
+      logger.info(" - Wait until Consul session #{id} exists")
+      wait_time.times do
+        exists = session_exist?
+        raise CreateSessionError, 'Error creating session' unless exists
+        sleep 1
+      end
+      logger.info(" - Found Consul session #{id}")
+    rescue CreateSessionError
+      init
+    end
+
     private
 
     # Initialize a session and store it's ID
@@ -118,8 +137,13 @@ module DaemonRunner
         :LockDelay => "#{delay}s",
         :Behavior => behavior
       )
-
       logger.info(" - Initialized a Consul session #{id}")
+    end
+
+    # Does the session exist
+    def session_exist?
+      sessions = Diplomat::Session.list
+      sessions.any? { |s| s['ID'] == id }
     end
   end
 end
