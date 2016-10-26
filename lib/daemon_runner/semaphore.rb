@@ -19,7 +19,7 @@ module DaemonRunner
       # Acquire a lock with the current session
       #
       # @param limit [Integer] The number of nodes that can request the lock
-      # @return [Boolean] `true` if the lock was acquired
+      # @return [Thread] Thread running a blocking call maintaining the lock state
       #
       def lock(limit = 3)
         raise RuntimeError, 'Must call start first' if @lock.nil?
@@ -28,12 +28,15 @@ module DaemonRunner
         @lock.set_limit(limit)
         @lock.try_lock
 
-        loop do
-          if @lock.renew?
-            @lock.semaphore_state
-            @lock.try_lock
+        thr = Thread.new do
+          loop do
+            if @lock.renew?
+              @lock.semaphore_state
+              @lock.try_lock
+            end
           end
         end
+        thr
       end
     end
 
