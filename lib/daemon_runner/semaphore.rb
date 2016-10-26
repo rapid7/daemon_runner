@@ -38,6 +38,16 @@ module DaemonRunner
         end
         thr
       end
+
+      # Release a lock with the current session
+      #
+      # @return [Boolean] `true` if the lock was released
+      #
+      def release
+        raise RuntimeError, 'Must call start first' if @lock.nil?
+        @lock.semaphore_state
+        @lock.try_release
+      end
     end
 
     # The Consul session
@@ -121,11 +131,23 @@ module DaemonRunner
     def try_lock
       prune_members
       do_update = add_self_to_holders
+      @reset = false
       if do_update
         format_holders
-        write_lock
+        @locked = write_lock
       end
-      locked?
+      log_lock_state
+    end
+
+    def try_release
+      do_update = remove_self_from_holders
+      if do_update
+        format_holders
+        @locked = !write_lock
+      end
+      DaemonRunner::Session.release(prefix)
+      session.destroy!
+      log_release_state
     end
 
     # Write a new lock file if the number of contenders is less than `limit`
@@ -134,7 +156,7 @@ module DaemonRunner
       index = lock_modify_index.nil? ? 0 : lock_modify_index
       value = generate_lockfile
       return true if value == true
-      @locked = Diplomat::Kv.put(@lock, value, cas: index)
+      Diplomat::Kv.put(@lock, value, cas: index)
     end
 
     # Start a blocking query on the prefix, if there are changes
@@ -199,6 +221,15 @@ module DaemonRunner
       end
     end
 
+    # Remove our session.id from the holders list
+    def remove_self_from_holders
+      return unless lock_exists?
+      @holders = lock_content['Holders']
+      @holders = @holders.keys
+      @holders.delete(session.id)
+      @holders
+    end
+
     # Format the list of holders for the lock file
     def format_holders
       @holders.uniq!
@@ -222,10 +253,18 @@ module DaemonRunner
       JSON.generate(lockfile_format)
     end
 
-    def locked?
-      msg = 'Lock %{text} obtained'
-      text = @locked == true ? 'succesfully' : 'could not be'
-      msg = msg % { text: text }
+    def log_lock_state
+      log_lock(locked: @locked)
+    end
+
+    def log_release_state
+      log_lock(locked: !@locked, end_string: 'released')
+    end
+
+    def log_lock(locked: true, end_string: 'obtained')
+      msg = 'Lock %{text} %{end_string}'
+      text = locked == true ? 'succesfully' : 'could not be'
+      msg = msg % { text: text, end_string: end_string }
       logger.info msg
     end
   end
