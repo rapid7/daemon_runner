@@ -9,14 +9,12 @@ require 'dev/consul'
 @lock_time = 10
 
 @semaphore = DaemonRunner::Semaphore.start(@service)
-thr = Thread.new do
-  DaemonRunner::Semaphore.lock(@lock_count)
-end
+lock = DaemonRunner::Semaphore.lock(@lock_count)
 
 @lock_time.downto(0).each do |i|
   @semaphore.logger.info "Releasing lock in #{i} seconds"
   sleep 1
 end
 
-thr.join
+lock.join
 DaemonRunner::Semaphore.release
