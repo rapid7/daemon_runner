@@ -40,10 +40,9 @@ class SemaphoreTest < ConsulIntegrationTest
 
   def test_can_write_lockfile
     @service = service_name
-    @sem = DaemonRunner::Semaphore.new(name: @service)
+    @sem = DaemonRunner::Semaphore.new(name: @service, limit: 3)
     @sem.contender_key
     @sem.semaphore_state
-    @sem.set_limit(3)
     @sem.try_lock
     lockfile = {
       'Limit' => 3,
@@ -57,8 +56,8 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_semapore_lock
-    @sem = DaemonRunner::Semaphore.start(@service)
-    lock = DaemonRunner::Semaphore.lock
+    @sem = DaemonRunner::Semaphore.new(name: @service)
+    lock = @sem.lock
     lockfile = {
       'Limit' => 3,
       'Holders' => {
@@ -71,10 +70,9 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_semapore_lock_with_options
-    skip
     @service = service_name
-    @sem = DaemonRunner::Semaphore.start(@service, prefix: "service/#{@service}/lock")
-    DaemonRunner::Semaphore.lock
+    @sem = DaemonRunner::Semaphore.new(name: @service, prefix: "service/#{@service}/lock")
+    @sem.lock
     lockfile = {
       'Limit' => 3,
       'Holders' => {
@@ -88,14 +86,12 @@ class SemaphoreTest < ConsulIntegrationTest
 
   def test_can_get_semapore_lock_with_no_update
     # Client 1
-    @service1 = service_name
-    @sem1 = DaemonRunner::Semaphore.start(@service1)
-    DaemonRunner::Semaphore.lock(1)
+    @sem1 = DaemonRunner::Semaphore.new(name: @service, limit: 1)
+    @sem1.lock
 
     # Client 2
-    @service2 = service_name
-    @sem2 = DaemonRunner::Semaphore.start(@service2)
-    DaemonRunner::Semaphore.lock(1)
+    @sem2 = DaemonRunner::Semaphore.new(name: @service, limit: 1)
+    @sem2.lock
 
     lockfile = {
       'Limit' => 1,
@@ -115,8 +111,9 @@ class SemaphoreTest < ConsulIntegrationTest
     @service1 = service_name
     @service2 = service_name
 
-    @sem1 = DaemonRunner::Semaphore.start(@service1)
-    @sem2 = DaemonRunner::Semaphore.start(@service2)
+    @sem1 = DaemonRunner::Semaphore.lock(@service1)
+    @sem2 = DaemonRunner::Semaphore.lock(@service2)
+
     refute_equal @sem1.session.id, @sem2.session.id
   end
 end

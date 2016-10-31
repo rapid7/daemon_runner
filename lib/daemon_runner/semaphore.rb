@@ -7,46 +7,17 @@ module DaemonRunner
 
     class << self
 
-      # Create a session
-      #
-      # @param name [String] The name of the session, usually the service name
-      # @see #initialize for extra `options`
-      def start(name, **options)
-        options.merge!(name: name)
-        @lock ||= Semaphore.new(options)
-      end
-
       # Acquire a lock with the current session
       #
       # @param limit [Integer] The number of nodes that can request the lock
-      # @return [Thread] Thread running a blocking call maintaining the lock state
+      # @see #initialize for extra `options`
+      # @return [DaemonRunner::Semaphore] instance of the semaphore class
       #
-      def lock(limit = 3)
-        raise RuntimeError, 'Must call start first' if @lock.nil?
-        @lock.contender_key
-        @lock.semaphore_state
-        @lock.set_limit(limit)
-        @lock.try_lock
-
-        thr = Thread.new do
-          loop do
-            if @lock.renew?
-              @lock.semaphore_state
-              @lock.try_lock
-            end
-          end
-        end
-        thr
-      end
-
-      # Release a lock with the current session
-      #
-      # @return [Boolean] `true` if the lock was released
-      #
-      def release
-        raise RuntimeError, 'Must call start first' if @lock.nil?
-        @lock.semaphore_state
-        @lock.try_release
+      def lock(name, limit = 3, **options)
+        options.merge!(name: name)
+        lock = Semaphore.new(options)
+        lock.lock
+        lock
       end
     end
 
@@ -68,25 +39,57 @@ module DaemonRunner
     # The Consul key prefix
     attr_reader :prefix
 
-    # The Consul lock key
-    attr_reader :lock
-
     # The number of nodes that can obtain a semaphore lock
     attr_reader :limit
 
     # @param name [String] The name of the session, it is also used in the `prefix`
     # @param prefix [String|NilClass] The Consul Kv prefix
     # @param lock [String|NilClass] The path to the lock file
-    def initialize(name:, prefix: nil, lock: nil)
+    def initialize(name:, prefix: nil, lock: nil, limit: 3)
       create_session(name)
       @prefix = prefix.nil? ? "service/#{name}/lock/" : prefix
       @prefix += '/' unless @prefix.end_with?('/')
       @lock = lock.nil? ? "#{@prefix}.lock" : lock
       @lock_modify_index = nil
       @lock_content = nil
-      @limit = nil
+      @limit = set_limit(limit)
       @reset = false
     end
+
+    # Obtain a lock with the current session
+    #
+    # @return [Boolean] `true` if the lock was obtained
+    #
+    def lock
+      contender_key
+      semaphore_state
+      try_lock
+    end
+
+    # Renew lock watching for changes
+    # @return [Thread] Thread running a blocking call maintaining the lock state
+    #
+    def renew
+      thr = Thread.new do
+        loop do
+          if renew?
+            semaphore_state
+            try_lock
+          end
+        end
+      end
+      thr
+    end
+
+    # Release a lock with the current session
+    #
+    # @return [Boolean] `true` if the lock was released
+    #
+    def release
+      semaphore_state
+      try_release
+    end
+
 
     def create_session(name)
       ::DaemonRunner::RetryErrors.retry(exceptions: [DaemonRunner::Session::CreateSessionError]) do
@@ -94,8 +97,6 @@ module DaemonRunner
       end
     end
 
-    # FIXME: Cannot clear limit, when there have been 0 active locks
-    # The number of nodes that can obtain a semaphore lock
     def set_limit(new_limit)
       if lock_exists?
         if new_limit.to_i != @limit.to_i
@@ -180,8 +181,8 @@ module DaemonRunner
     # Set `@lock_modify_index`, `@lock_content`, and `@members`
     # @returns [Array] List of members
     def decode_semaphore_state
-      lock_key = state.find { |k| k['Key'] == lock }
-      member_keys = state.delete_if { |k| k['Key'] == lock }
+      lock_key = state.find { |k| k['Key'] == @lock }
+      member_keys = state.delete_if { |k| k['Key'] == @lock }
       member_keys.map! { |k| k['Key'] }
 
       unless lock_key.nil?
