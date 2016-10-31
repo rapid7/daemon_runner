@@ -5,7 +5,6 @@ class SessionTest < ConsulIntegrationTest
   def setup
     super
     @session = ::DaemonRunner::Session.start(@service)
-    @sem = DaemonRunner::Semaphore.new(name: @service)
     @prefix = "service/#{@service}/lock"
   end
 
