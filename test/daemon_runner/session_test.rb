@@ -5,7 +5,6 @@ class SessionTest < ConsulIntegrationTest
   def setup
     super
     @session = ::DaemonRunner::Session.start(@service)
-    @sem = DaemonRunner::Semaphore.new(name: @service)
     @prefix = "service/#{@service}/lock"
   end
 
@@ -25,5 +24,13 @@ class SessionTest < ConsulIntegrationTest
     assert_raises(Faraday::ClientError) do
       DaemonRunner::Session.lock(@prefix)
     end
+  end
+
+  def test_can_get_two_uniq_sessions
+    @service1 = service_name
+    @service2 = service_name
+    @session1 = ::DaemonRunner::Session.start(@service1)
+    @session2 = ::DaemonRunner::Session.start(@service2)
+    refute_equal @session1.id, @session2.id
   end
 end

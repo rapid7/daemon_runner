@@ -14,7 +14,7 @@ module DaemonRunner
       attr_reader :session
 
       def start(name, **options)
-        @session ||= Session.new(name, options).renew!
+        @session = Session.new(name, options).renew!
         raise CreateSessionError, 'Failed to create session' if @session == false
         @session.verify_session
         @session
