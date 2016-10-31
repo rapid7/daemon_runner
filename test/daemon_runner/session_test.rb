@@ -1,40 +1,24 @@
 require_relative '../test_helper'
 require 'dev/consul'
 
-class SessionTest < Minitest::Test
-
-  ## Setup
-  Dev::Consul.run
-  sleep 2
-  Dev::Consul.wait
-
+class SessionTest < ConsulIntegrationTest
   def setup
+    super
     @session = ::DaemonRunner::Session.start(@service)
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     @prefix = "service/#{@service}/lock"
   end
-  ###
-
-  ## Teardown
-  def teardown
-    @session = nil
-    sleep 1
-  end
-  Minitest.after_run { Dev::Consul.stop }
-  ###
 
   def test_can_get_session
-    @service = 'myservice1'
     refute_nil @session
     assert_kind_of DaemonRunner::Session, @session
   end
 
   def test_can_aquire_lock
-    @service = 'myservice2'
     assert DaemonRunner::Session.lock(@prefix)
   end
 
   def test_can_release_lock
-    @service = 'myservice3'
     assert DaemonRunner::Session.lock(@prefix)
     assert DaemonRunner::Session.release(@prefix)
     assert @session.destroy!
@@ -42,5 +26,4 @@ class SessionTest < Minitest::Test
       DaemonRunner::Session.lock(@prefix)
     end
   end
-
 end

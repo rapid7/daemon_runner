@@ -20,7 +20,6 @@ module DaemonRunner
         @session
       end
 
-
       # Acquire a lock with the current session, or initialize a new session
       #
       # @param path [String]  A path in the Consul key-value space to lock
