@@ -21,12 +21,17 @@ module DaemonRunner
         logger = job[:logger]
         task_id = job[:task_id]
 
+        mutex = @mutexes[task_id]
+
         logger.error "#{task_id}: #{error}"
         logger.debug "#{task_id}: Suspending #{task_id} for #{error_sleep_time} seconds"
-        job.pause
+
+        # Unlock the job mutex if the job owns it and on_error_release_lock is true
+        mutex.unlock if on_error_release_lock && mutex.owned?
+
         sleep error_sleep_time
+
         logger.debug "#{task_id}: Resuming #{task_id}"
-        job.resume
       end
     end
 
