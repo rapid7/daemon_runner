@@ -17,6 +17,7 @@ module DaemonRunner
       # @param [RuntimeError] error the body of the error
       def scheduler.on_error(job, error)
         error_sleep_time = job[:error_sleep_time]
+        on_error_release_lock = job[:on_error_release_lock]
         logger = job[:logger]
         task_id = job[:task_id]
 
@@ -56,6 +57,16 @@ module DaemonRunner
       # The default type is an `interval` which trigger, execute and then trigger again after
       # the interval has elapsed.
       [:interval, loop_sleep_time]
+    end
+
+    # @return [Boolean] Whether to release a mutex lock if an error occurs in a task.
+    def on_error_release_lock
+      return @on_error_release_lock unless @on_error_release_lock.nil?
+      @on_error_release_lock = if options[:on_error_release_lock].nil?
+                        true
+                      else
+                        options[:on_error_release_lock]
+                      end
     end
 
     # @return [Fixnum] Number of seconds to sleep between loop interactions.
@@ -182,6 +193,7 @@ module DaemonRunner
         logger.debug log_line
 
         job[:error_sleep_time] = error_sleep_time
+        job[:on_error_release_lock] = on_error_release_lock
         job[:logger] = logger
         job[:task_id] = task_id
 
