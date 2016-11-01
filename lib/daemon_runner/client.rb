@@ -123,11 +123,14 @@ module DaemonRunner
 
       out[:method] = task[1]
 
-      out[:task_id] = if out[:instance].respond_to?(:task_id)
-        out[:instance].send(:task_id).to_s
+      if out[:instance].instance_variable_defined?(:@task_id)
+        out[:task_id] = out[:instance].instance_variable_get(:@task_id)
+      elsif out[:instance].respond_to?(:task_id)
+        out[:task_id] = out[:instance].send(:task_id).to_s
       else
-        "#{out[:class_name]}.#{out[:method]}"
+        out[:task_id] = "#{out[:class_name]}.#{out[:method]}"
       end
+
       raise ArgumentError, 'Invalid task id' if out[:task_id].nil? || out[:task_id].empty?
 
       out[:args] = task[2..-1].flatten
@@ -171,7 +174,7 @@ module DaemonRunner
       schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
-      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
+      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true, :mutex => task_id) do |job|
         log_line = "#{task_id}: Running #{class_name}.#{method}"
         log_line += "(#{args})" unless args.empty?
         logger.debug log_line
