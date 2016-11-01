@@ -143,10 +143,12 @@ module DaemonRunner
     def parse_schedule(instance)
       valid_types = [:in, :at, :every, :interval, :cron]
       out = {}
-      task_schedule = if instance.respond_to?(:schedule)
-        instance.send(:schedule)
+      if instance.instance_variable_defined?(:@schedule)
+        task_schedule = instance.instance_variable_get(:@schedule)
+      elsif instance.respond_to?(:schedule)
+        task_schedule = instance.send(:schedule)
       else
-        schedule
+        task_schedule = schedule
       end
 
       raise ArgumentError, 'Malformed schedule definition, should be [TYPE, DURATION]' if task_schedule.length < 2
