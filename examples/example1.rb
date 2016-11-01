@@ -37,11 +37,16 @@ class MyService
         end
 
         def run!(args)
+          sleep 10
           name = args[0]
           reason = args[1]
           puts name
           puts reason
           name
+        end
+
+        def task_id
+          'long-running-task'
         end
       end
     end
@@ -51,10 +56,13 @@ end
 class MyService
   class Tasks
     class Quiz
-      def schedule
-        [:interval, '30s']
+      def initialize
+        @task_id = 'long-running-task'
+        @schedule = [:interval, '30s']
       end
+
       def foo!(args)
+        sleep 10
         puts 'Firing error'
         sargs
       end
