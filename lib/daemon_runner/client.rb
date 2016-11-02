@@ -17,15 +17,21 @@ module DaemonRunner
       # @param [RuntimeError] error the body of the error
       def scheduler.on_error(job, error)
         error_sleep_time = job[:error_sleep_time]
+        on_error_release_lock = job[:on_error_release_lock]
         logger = job[:logger]
         task_id = job[:task_id]
 
+        mutex = @mutexes[task_id]
+
         logger.error "#{task_id}: #{error}"
         logger.debug "#{task_id}: Suspending #{task_id} for #{error_sleep_time} seconds"
-        job.pause
+
+        # Unlock the job mutex if the job owns it and on_error_release_lock is true
+        mutex.unlock if on_error_release_lock && mutex.owned?
+
         sleep error_sleep_time
+
         logger.debug "#{task_id}: Resuming #{task_id}"
-        job.resume
       end
     end
 
@@ -56,6 +62,16 @@ module DaemonRunner
       # The default type is an `interval` which trigger, execute and then trigger again after
       # the interval has elapsed.
       [:interval, loop_sleep_time]
+    end
+
+    # @return [Boolean] Whether to release a mutex lock if an error occurs in a task.
+    def on_error_release_lock
+      return @on_error_release_lock unless @on_error_release_lock.nil?
+      @on_error_release_lock = if options[:on_error_release_lock].nil?
+                        true
+                      else
+                        options[:on_error_release_lock]
+                      end
     end
 
     # @return [Fixnum] Number of seconds to sleep between loop interactions.
@@ -123,11 +139,14 @@ module DaemonRunner
 
       out[:method] = task[1]
 
-      out[:task_id] = if out[:instance].respond_to?(:task_id)
-        out[:instance].send(:task_id).to_s
+      if out[:instance].instance_variable_defined?(:@task_id)
+        out[:task_id] = out[:instance].instance_variable_get(:@task_id)
+      elsif out[:instance].respond_to?(:task_id)
+        out[:task_id] = out[:instance].send(:task_id).to_s
       else
-        "#{out[:class_name]}.#{out[:method]}"
+        out[:task_id] = "#{out[:class_name]}.#{out[:method]}"
       end
+
       raise ArgumentError, 'Invalid task id' if out[:task_id].nil? || out[:task_id].empty?
 
       out[:args] = task[2..-1].flatten
@@ -140,10 +159,12 @@ module DaemonRunner
     def parse_schedule(instance)
       valid_types = [:in, :at, :every, :interval, :cron]
       out = {}
-      task_schedule = if instance.respond_to?(:schedule)
-        instance.send(:schedule)
+      if instance.instance_variable_defined?(:@schedule)
+        task_schedule = instance.instance_variable_get(:@schedule)
+      elsif instance.respond_to?(:schedule)
+        task_schedule = instance.send(:schedule)
       else
-        schedule
+        task_schedule = schedule
       end
 
       raise ArgumentError, 'Malformed schedule definition, should be [TYPE, DURATION]' if task_schedule.length < 2
@@ -171,12 +192,13 @@ module DaemonRunner
       schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
-      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true) do |job|
+      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true, :mutex => task_id) do |job|
         log_line = "#{task_id}: Running #{class_name}.#{method}"
         log_line += "(#{args})" unless args.empty?
         logger.debug log_line
 
         job[:error_sleep_time] = error_sleep_time
+        job[:on_error_release_lock] = on_error_release_lock
         job[:logger] = logger
         job[:task_id] = task_id
 
