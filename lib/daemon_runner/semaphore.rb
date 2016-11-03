@@ -15,9 +15,15 @@ module DaemonRunner
       #
       def lock(name, limit = 3, **options)
         options.merge!(name: name)
-        lock = Semaphore.new(options)
-        lock.lock
-        lock
+        semaphore = Semaphore.new(options)
+        semaphore.lock
+        if block_given?
+          lock_thr = semaphore.renew
+          yield
+          lock_thr.kill
+          semaphore.release
+        end
+        semaphore
       end
     end
 
