@@ -172,6 +172,7 @@ module DaemonRunner
 
       out[:type] = task_schedule[0].to_sym
       out[:schedule] = task_schedule[1]
+      out[:extra_opts] = task_schedule[2] if task_schedule.length > 2
       out
     end
 
@@ -192,7 +193,10 @@ module DaemonRunner
       schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
-      scheduler.send(schedule[:type], schedule[:schedule], :overlap => false, :job => true, :mutex => task_id) do |job|
+      opts = { :overlap => false, :job => true, :mutex => task_id }
+      opts.merge!(schedule[:extra_opts]) if schedule.key?(:extra_opts)
+
+      scheduler.send(schedule[:type], schedule[:schedule], opts) do |job|
         log_line = "#{task_id}: Running #{class_name}.#{method}"
         log_line += "(#{args})" unless args.empty?
         logger.debug log_line
