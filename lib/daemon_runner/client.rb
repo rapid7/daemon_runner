@@ -24,6 +24,7 @@ module DaemonRunner
         mutex = @mutexes[task_id]
 
         logger.error "#{task_id}: #{error}"
+        logger.debug "#{task_id}: #{error.backtrace.join("\n")}"
         logger.debug "#{task_id}: Suspending #{task_id} for #{error_sleep_time} seconds"
 
         # Unlock the job mutex if the job owns it and on_error_release_lock is true
