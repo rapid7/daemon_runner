@@ -6,6 +6,7 @@ module DaemonRunner
     include Logger
 
     class << self
+      include Logger
 
       # Acquire a lock with the current session
       #
@@ -20,10 +21,15 @@ module DaemonRunner
         if block_given?
           lock_thr = semaphore.renew
           yield
-          lock_thr.kill
-          semaphore.release
         end
         semaphore
+      rescue Exception => e
+        logger.error e
+        logger.debug e.backtrace.join("\n")
+        raise
+      ensure
+        lock_thr.kill
+        semaphore.release
       end
     end
 
