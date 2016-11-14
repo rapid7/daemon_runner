@@ -94,7 +94,7 @@ module DaemonRunner
     # Setup a new Mixlib::ShellOut client runner
     # @return [Mixlib::ShellOut] client
     def runner
-      @runner ||= Mixlib::ShellOut.new(command, :cwd => cwd, :timeout => timeout)
+      @runner = Mixlib::ShellOut.new(command, :cwd => cwd, :timeout => timeout)
       @runner.valid_exit_codes = valid_exit_codes
     end
   end
