@@ -19,20 +19,20 @@ module DaemonRunner
         error_sleep_time = job[:error_sleep_time]
         on_error_release_lock = job[:on_error_release_lock]
         logger = job[:logger]
-        task_id = job[:task_id]
+        logger_name = job[:logger_name]
 
         mutex = @mutexes[task_id]
 
-        logger.error "#{task_id}: #{error}"
-        logger.debug "#{task_id}: #{error.backtrace.join("\n")}"
-        logger.debug "#{task_id}: Suspending #{task_id} for #{error_sleep_time} seconds"
+        logger.error "#{logger_name}: #{error}"
+        logger.debug "#{logger_name}: #{error.backtrace.join("\n")}"
+        logger.debug "#{logger_name}: Suspending #{logger_name} for #{error_sleep_time} seconds"
 
         # Unlock the job mutex if the job owns it and on_error_release_lock is true
         mutex.unlock if on_error_release_lock && mutex.owned?
 
         sleep error_sleep_time
 
-        logger.debug "#{task_id}: Resuming #{task_id}"
+        logger.debug "#{logger_name}: Resuming #{logger_name}"
       end
     end
 
@@ -148,6 +148,8 @@ module DaemonRunner
         out[:task_id] = "#{out[:class_name]}.#{out[:method]}"
       end
 
+      out[:logger_name] = "#{out[:class_name]}.#{out[:method]}"
+
       raise ArgumentError, 'Invalid task id' if out[:task_id].nil? || out[:task_id].empty?
 
       out[:args] = task[2..-1].flatten
@@ -188,9 +190,10 @@ module DaemonRunner
       method = parsed_task[:method]
       args = parsed_task[:args]
       task_id = parsed_task[:task_id]
+      logger_name = parsed_task[:logger_name]
 
       # Schedule the task
-      schedule_log_line = "#{task_id}: Scheduling job #{class_name}.#{method} as `:#{schedule[:type]}` type"
+      schedule_log_line = "#{logger_name}: Scheduling job #{class_name}.#{method} as `:#{schedule[:type]}` type"
       schedule_log_line += " with schedule: #{schedule[:schedule]}"
       logger.debug schedule_log_line
 
@@ -198,7 +201,7 @@ module DaemonRunner
       opts.merge!(schedule[:extra_opts]) if schedule.key?(:extra_opts)
 
       scheduler.send(schedule[:type], schedule[:schedule], opts) do |job|
-        log_line = "#{task_id}: Running #{class_name}.#{method}"
+        log_line = "#{logger_name}: Running #{class_name}.#{method}"
         log_line += "(#{args})" unless args.empty?
         logger.debug log_line
 
@@ -206,13 +209,14 @@ module DaemonRunner
         job[:on_error_release_lock] = on_error_release_lock
         job[:logger] = logger
         job[:task_id] = task_id
+        job[:logger_name] = logger_name
 
         out = if args.empty?
           instance.send(method.to_sym)
         else
           instance.send(method.to_sym, args)
         end
-        logger.debug "#{task_id}: Got: #{out}"
+        logger.debug "#{logger_name}: Got: #{out}"
       end
     end
 
