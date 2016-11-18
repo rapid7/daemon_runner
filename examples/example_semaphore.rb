@@ -5,7 +5,7 @@ require 'dev/consul'
 
 @service = 'myservice'
 @lock_count = 3
-@locked = false
+@lock_time = 10
 
 ::Dev::Consul.run
 ::Dev::Consul.wait
@@ -17,8 +17,10 @@ require 'dev/consul'
 @renew_thread = @semaphore.renew
 
 # Do whatever kind of work you want
-puts 'Working...'
-sleep 1
+@lock_time.downto(0).each do |i|
+  puts "Releasing lock in #{i} seconds"
+  sleep 1
+end
 
 # Kill the thread when you're done
 @renew_thread.kill

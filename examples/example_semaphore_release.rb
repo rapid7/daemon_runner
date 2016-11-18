@@ -5,8 +5,10 @@ require 'dev/consul'
 
 @service = 'myreleaseservice'
 @lock_count = 3
-@locked = false
 @lock_time = 10
+
+::Dev::Consul.run
+::Dev::Consul.wait
 
 DaemonRunner::Semaphore.lock(@service, @lock_count) do
   @lock_time.downto(0).each do |i|
@@ -14,3 +16,5 @@ DaemonRunner::Semaphore.lock(@service, @lock_count) do
    sleep 1
   end
 end
+
+::Dev::Consul.stop
