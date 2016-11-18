@@ -28,7 +28,7 @@ module DaemonRunner
         logger.debug e.backtrace.join("\n")
         raise
       ensure
-        lock_thr.kill
+        lock_thr.kill unless lock_thr.nil?
         semaphore.release
       end
     end
