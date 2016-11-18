@@ -19,17 +19,19 @@ module DaemonRunner
         semaphore = Semaphore.new(options)
         semaphore.lock
         if block_given?
-          lock_thr = semaphore.renew
-          yield
+          begin
+            lock_thr = semaphore.renew
+            yield
+          ensure
+            lock_thr.kill
+            semaphore.release
+          end
         end
         semaphore
       rescue Exception => e
         logger.error e
         logger.debug e.backtrace.join("\n")
         raise
-      ensure
-        lock_thr.kill unless lock_thr.nil?
-        semaphore.release
       end
     end
 
