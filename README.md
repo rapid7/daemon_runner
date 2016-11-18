@@ -168,7 +168,7 @@ Locking can be done either via an exclusive lock or a semaphore lock.  The major
 **TBD**
 
 #### Semaphore Lock
-For an example of how to implement semaphore locking take a look at the [example](/examples/example_semaphore.rb)
+For an example of how to implement semaphore locking take a look at the [manual locking example](/examples/example_semaphore.rb) and the [slightly more automatic version](/examples/example_semaphore_release.rb).
 
 
 ## Development
