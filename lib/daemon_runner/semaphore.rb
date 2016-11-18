@@ -23,7 +23,7 @@ module DaemonRunner
             lock_thr = semaphore.renew
             yield
           ensure
-            lock_thr.kill
+            lock_thr.kill unless lock_thr.nil?
             semaphore.release
           end
         end
