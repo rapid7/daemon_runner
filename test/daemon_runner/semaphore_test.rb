@@ -107,6 +107,16 @@ class SemaphoreTest < ConsulIntegrationTest
     assert_equal lockfile, @sem2.lock_content
   end
 
+  def test_semaphore_lock_with_default_limit
+    @sem = DaemonRunner::Semaphore.lock(@service)
+    assert_equal 3, @sem.limit
+  end
+
+  def test_semaphore_lock_with_custom_limit
+    @sem = DaemonRunner::Semaphore.lock(@service, 1)
+    assert_equal 1, @sem.limit
+  end
+
   def test_can_get_two_uniq_lock_sessions
     @service1 = service_name
     @service2 = service_name

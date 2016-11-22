@@ -16,6 +16,7 @@ module DaemonRunner
       #
       def lock(name, limit = 3, **options)
         options.merge!(name: name)
+        options.merge!(limit: limit)
         semaphore = Semaphore.new(options)
         semaphore.lock
         if block_given?
