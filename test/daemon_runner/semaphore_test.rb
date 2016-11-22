@@ -1,5 +1,28 @@
 require_relative '../test_helper'
 
+class MockSemaphore
+  def initialize(lock_check: nil)
+    @lock_check = lock_check
+  end
+
+  def locked?
+    if @lock_check.nil?
+      false
+    else
+      @lock_check.call
+    end
+  end
+
+  def lock
+  end
+
+  def renew
+  end
+
+  def release
+  end
+end
+
 class SemaphoreTest < ConsulIntegrationTest
   def setup
     super
@@ -129,6 +152,22 @@ class SemaphoreTest < ConsulIntegrationTest
 
     assert_equal false, @sem1.locked?
     assert_equal true, @sem2.locked?
+  end
+
+  def test_semaphore_lock_waits_to_yield
+    lock_checks = 0
+    lock_checker = lambda do
+      lock_checks += 1
+      lock_checks >= 3
+    end
+
+    mock_semaphore = MockSemaphore.new(lock_check: lock_checker)
+
+    DaemonRunner::Semaphore.stub :new, mock_semaphore do
+      DaemonRunner::Semaphore.lock(@service, 1) do
+        assert_equal 3, lock_checks
+      end
+    end
   end
 
   def test_can_get_two_uniq_lock_sessions
