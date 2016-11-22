@@ -1,11 +1,15 @@
 require_relative '../test_helper'
 
 class MockSemaphore
+  attr_reader :callstack
+
   def initialize(lock_check: nil)
     @lock_check = lock_check
+    @callstack = []
   end
 
   def locked?
+    @callstack << :locked?
     if @lock_check.nil?
       false
     else
@@ -14,12 +18,20 @@ class MockSemaphore
   end
 
   def lock
+    @callstack << :lock
+  end
+
+  def try_lock
+    @callstack << :try_lock
   end
 
   def renew
+    @callstack << :renew
+    nil
   end
 
   def release
+    @callstack << :release
   end
 end
 
@@ -168,6 +180,15 @@ class SemaphoreTest < ConsulIntegrationTest
         assert_equal 3, lock_checks
       end
     end
+
+    assert_equal [
+      :lock,
+      :locked?, :try_lock,
+      :locked?, :try_lock,
+      :locked?,
+      :renew,
+      :release
+    ], mock_semaphore.callstack
   end
 
   def test_can_get_two_uniq_lock_sessions
