@@ -36,12 +36,6 @@ class MockSemaphore
 end
 
 class SemaphoreTest < ConsulIntegrationTest
-  def setup
-    super
-    @sem = DaemonRunner::Semaphore.new(name: @service)
-    @session = @sem.session
-  end
-
   def teardown
     super
     ObjectSpace.each_object(DaemonRunner::Semaphore) do |semaphore|
@@ -50,6 +44,7 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_get_prefix
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     assert_equal "service/#{@service}/lock/", @sem.prefix
   end
 
@@ -62,14 +57,17 @@ class SemaphoreTest < ConsulIntegrationTest
   end
 
   def test_can_write_contender_key
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     assert @sem.contender_key
   end
 
   def test_can_get_empty_semapore_state
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     assert_empty @sem.semaphore_state
   end
 
   def test_can_get_semapore_state
+    @sem = DaemonRunner::Semaphore.new(name: @service)
     @sem.contender_key
     refute_empty @sem.semaphore_state
     refute_nil @sem.state
