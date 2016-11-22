@@ -81,6 +81,14 @@ module DaemonRunner
       try_lock
     end
 
+    # Check if the semaphore holds the lock
+    #
+    # @return [Boolean] `true` if the lock is held, `false` otherwise
+    def locked?
+      semaphore_state
+      lock_exists? && (lock_content['Holders'] || []).include?(session.id)
+    end
+
     # Renew lock watching for changes
     # @return [Thread] Thread running a blocking call maintaining the lock state
     #
