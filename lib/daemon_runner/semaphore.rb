@@ -22,6 +22,7 @@ module DaemonRunner
         if block_given?
           begin
             lock_thr = semaphore.renew
+            loop until semaphore.locked?
             yield
           ensure
             lock_thr.kill unless lock_thr.nil?
