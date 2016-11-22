@@ -42,6 +42,13 @@ class SemaphoreTest < ConsulIntegrationTest
     @session = @sem.session
   end
 
+  def teardown
+    super
+    ObjectSpace.each_object(DaemonRunner::Semaphore) do |semaphore|
+      semaphore.release
+    end
+  end
+
   def test_can_get_prefix
     assert_equal "service/#{@service}/lock/", @sem.prefix
   end
