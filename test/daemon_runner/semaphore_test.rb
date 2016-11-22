@@ -117,6 +117,20 @@ class SemaphoreTest < ConsulIntegrationTest
     assert_equal 1, @sem.limit
   end
 
+  def test_can_check_semaphore_locked_state
+    @sem1 = DaemonRunner::Semaphore.lock(@service, 1)
+    @sem2 = DaemonRunner::Semaphore.lock(@service, 1)
+
+    assert_equal true, @sem1.locked?
+    assert_equal false, @sem2.locked?
+
+    @sem1.release
+    @sem2.lock
+
+    assert_equal false, @sem1.locked?
+    assert_equal true, @sem2.locked?
+  end
+
   def test_can_get_two_uniq_lock_sessions
     @service1 = service_name
     @service2 = service_name
