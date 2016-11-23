@@ -21,6 +21,10 @@ module DaemonRunner
         semaphore.lock
         if block_given?
           begin
+            until semaphore.locked?
+              semaphore.try_lock
+              sleep 0.1
+            end
             lock_thr = semaphore.renew
             yield
           ensure
